@@ -12,8 +12,13 @@ val reactiveMongoVer = "0.12.1"
 
 val newTypeSettings = libraryDependencies += "io.estatico" %% "newtype" % "0.1.0"
 
+lazy val lihua = project.in(file("."))
+  .settings(commonSettings)
+  .settings(noPublishSettings)
+  .aggregate(mongo)
+
 lazy val mongo = project
-  .settings(name := "mongodb")
+  .settings(name := "mongo")
   .settings(moduleName := "lihua-mongo")
   .settings(commonSettings)
   .settings(mainecoonSettings)
