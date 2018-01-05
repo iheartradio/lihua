@@ -14,8 +14,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Convenience class that reads mongodb conf from a `Config` and make sure connections are close when shutting down.
- * You can call {@link lihua.mongo.Mongo#database} to create an instance of database and call `db.collection[TC](collectionName)`
- * or you can get the {@link lihua.mongo.Mongo#driver} or {@link lihua.mongo.Mongo#connection} and work with them.
+ * You can call `lihua.mongo.Mongo#database` to create an instance of database and call `db.collection[TC]collectionName)`
+ * or you can get the `lihua.mongo.Mongo#driver` or `lihua.mongo.Mongo#connection` and work with them.
  */
 class Mongo private (config: Config)(implicit sh: ShutdownHook) {
   lazy val driver: MongoDriver = {

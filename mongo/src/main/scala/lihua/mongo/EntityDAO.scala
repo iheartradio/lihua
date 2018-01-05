@@ -10,6 +10,7 @@ import reactivemongo.api.{QueryOpts, ReadPreference}
 
 import scala.concurrent.duration.FiniteDuration
 import mainecoon.{finalAlg, autoFunctorK}
+
 /**
  * Final tagless encoding of the DAO Algebra
  * @tparam F effect Monad
