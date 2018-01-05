@@ -1,4 +1,3 @@
-import sbt.Keys.resolvers
 import org.typelevel.Dependencies._
 
 addCommandAlias("gitSnapshots", ";set version in ThisBuild := git.gitDescribedVersion.value.get + \"-SNAPSHOT\"")
@@ -51,11 +50,11 @@ lazy val mainecoonSettings = Seq(
 
 lazy val buildSettings = sharedBuildSettings(gh, vAll)
 
-lazy val commonSettings = sharedCommonSettings ++ scalacAllSettings ++ Seq(
+lazy val commonSettings = buildSettings ++ publishSettings ++ scoverageSettings ++ sharedCommonSettings ++ scalacAllSettings ++ Seq(
   parallelExecution in Test := false,
   organization := "lihua",
   crossScalaVersions := Seq(vAll.vers("scalac_2.11"), scalaVersion.value)
-) ++ buildSettings ++ publishSettings ++ scoverageSettings
+)
 
 lazy val commonJsSettings = Seq(scalaJSStage in Global := FastOptStage)
 
