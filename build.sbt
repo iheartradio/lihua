@@ -52,7 +52,6 @@ lazy val buildSettings = sharedBuildSettings(gh, vAll)
 
 lazy val commonSettings = buildSettings ++ publishSettings ++ unidocCommonSettings ++ scoverageSettings ++ sharedCommonSettings ++ scalacAllSettings ++ Seq(
   parallelExecution in Test := false,
-  organization := "lihua",
   sources in (Compile, doc) :=  Nil, //todo: somehow sbt doc hang, disable it for now so that I can release.
   crossScalaVersions := Seq(vAll.vers("scalac_2.11"), scalaVersion.value)
 
