@@ -24,10 +24,11 @@ import reactivemongo.api.commands.WriteResult
 
 import scala.concurrent.duration.FiniteDuration
 import scalacache._
+import modes.scalaFuture._
 import caffeine._
 
 class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extends EntityDAO[Result, T] {
-  implicit val scalaCache = ScalaCache(CaffeineCache())
+  implicit val scalaCache: Cache[Vector[Entity[T]]] = CaffeineCache[Vector[Entity[T]]]
 
   lazy val writeCollection = collection.withReadPreference(ReadPreference.primary)
 
@@ -40,7 +41,7 @@ class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extend
   }
 
   def invalidateCache(q: Query): Result[Unit] =
-    of(scalacache.remove(q))
+    of(scalacache.remove(q)).as(())
 
   private def internalFind(q: Query): Future[Vector[Entity[T]]] = {
     var builder = collection.find(q.selector)
@@ -55,7 +56,7 @@ class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extend
     if (ttl.length == 0L)
       internalFind(query)
     else
-      cachingWithTTL(query)(ttl) {
+      cachingF(query)(Some(ttl)) {
         internalFind(query)
       }
   }
