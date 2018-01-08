@@ -31,7 +31,7 @@ lazy val mongo = project
       "org.reactivemongo" %% "reactivemongo-iteratees" % reactiveMongoVer,
       "com.iheart" %% "ficus" % "1.4.3",
       "com.github.cb372" %% "scalacache-caffeine" % "0.22.0",
-      "com.typesafe.play" %% "play-json" % "2.6.7",
+      "com.typesafe.play" %% "play-json" % "2.5.13",
       "org.log4s" %% "log4s" % "1.3.4",
       "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
     )
