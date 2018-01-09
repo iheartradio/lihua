@@ -7,7 +7,7 @@ val gh = GitHubSettings(org = "iheartradio", proj = "lihua", publishOrg = "com.i
 val devs = Seq(Dev("Kailuo Wang", "@kailuowang"))
 
 val vAll = Versions(versions, libraries, scalacPlugins)
-val reactiveMongoVer = "0.12.7"
+val reactiveMongoVer = "0.12.6"
 
 val newTypeSettings = libraryDependencies += "io.estatico" %% "newtype" % "0.1.0"
 
