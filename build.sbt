@@ -7,7 +7,7 @@ val gh = GitHubSettings(org = "iheartradio", proj = "lihua", publishOrg = "com.i
 val devs = Seq(Dev("Kailuo Wang", "@kailuowang"))
 
 val vAll = Versions(versions, libraries, scalacPlugins)
-val reactiveMongoVer = "0.12.1"
+val reactiveMongoVer = "0.12.7"
 
 val newTypeSettings = libraryDependencies += "io.estatico" %% "newtype" % "0.1.0"
 
@@ -27,11 +27,11 @@ lazy val mongo = project
   .settings(
     libraryDependencies ++= Seq(
       "org.reactivemongo" %% "reactivemongo" % reactiveMongoVer,
-      "org.reactivemongo" %% "reactivemongo-play-json" % reactiveMongoVer,
+      "org.reactivemongo" %% "reactivemongo-play-json" % (reactiveMongoVer + "-play26"),
       "org.reactivemongo" %% "reactivemongo-iteratees" % reactiveMongoVer,
       "com.iheart" %% "ficus" % "1.4.3",
       "com.github.cb372" %% "scalacache-caffeine" % "0.22.0",
-      "com.typesafe.play" %% "play-json" % "2.5.13",
+      "com.typesafe.play" %% "play-json" % "2.6.2",
       "org.log4s" %% "log4s" % "1.3.4",
       "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
     )
