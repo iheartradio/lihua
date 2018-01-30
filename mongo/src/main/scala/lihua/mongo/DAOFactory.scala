@@ -16,7 +16,7 @@ import cats.implicits._
 trait DAOFactory[F[_], A] {
 
   def ensure(collection: JSONCollection)(implicit ec: ExecutionContext): F[Unit]
-  def createFromCollection(collection: JSONCollection): EntityDAO[F, A]
+  def createFromCollection(collection: JSONCollection)(implicit ec: ExecutionContext): EntityDAO[F, A]
 
   def create(cfg: Config, dbName: String, collectionName: String)(implicit ec: ExecutionContext,
                                                  sh: ShutdownHook,
@@ -38,4 +38,8 @@ trait DAOFactory[F[_], A] {
 
   protected def toF[B](f : => Future[B])(implicit F: Async[F], ec: ExecutionContext) : F[B] =
     IO.fromFuture(IO(f)).liftIO
+}
+
+trait IODAOFactory[A] extends DAOFactory[IO, A] {
+  def createFromCollection(collection: JSONCollection)(implicit ec: ExecutionContext): EntityDAO[IO, A] = IOEntityDAO[A]
 }
