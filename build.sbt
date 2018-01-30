@@ -9,7 +9,6 @@ val devs = Seq(Dev("Kailuo Wang", "@kailuowang"))
 val vAll = Versions(versions, libraries, scalacPlugins)
 val reactiveMongoVer = "0.12.6"
 
-val newTypeSettings = libraryDependencies += "io.estatico" %% "newtype" % "0.1.0"
 
 lazy val lihua = project.in(file("."))
   .settings(commonSettings)
@@ -33,7 +32,9 @@ lazy val mongo = project
       "com.github.cb372" %% "scalacache-caffeine" % "0.22.0",
       "com.typesafe.play" %% "play-json" % "2.6.2",
       "org.log4s" %% "log4s" % "1.3.4",
-      "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
+      "com.google.code.findbugs" % "jsr305" % "3.0.0", //needed by scalacache-caffeine
+      "io.estatico" %% "newtype" % "0.1.0",
+      "org.julienrf" %% "play-json-derived-codecs" % "4.0.0"
     )
   )
 
