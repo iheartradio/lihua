@@ -35,10 +35,10 @@ class DAOFactory[F[_]: Async](cfg: Config)(implicit sh: ShutdownHook) {
   }
 
   def createDAO[RF[_], A: Format](dbName: String,
-                                  collectionName: String,
-                                  f: JSONCollection => EntityDAO[RF, A])
+                                  collectionName: String)(
+                                  f: JSONCollection => F[EntityDAO[RF, A]])
                                  (implicit ec: ExecutionContext): F[EntityDAO[RF, A]] =
-    create(dbName, collectionName).map(f)
+    create(dbName, collectionName).flatMap(f)
 
   protected def toF[B](f : => Future[B])(implicit ec: ExecutionContext) : F[B] =
     IO.fromFuture(IO(f)).liftIO
