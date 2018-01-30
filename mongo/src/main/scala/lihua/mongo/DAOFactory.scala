@@ -6,6 +6,7 @@ import play.api.libs.json.Format
 import reactivemongo.api.ReadPreference
 import reactivemongo.play.json.collection.JSONCollection
 import Mongo._
+import cats.data.EitherT
 import cats.effect.{Async, IO}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -15,13 +16,15 @@ import cats.implicits._
 
 trait DAOFactory[F[_], A] {
 
+  type Result[T] = EitherT[F, DBError, T]
+
   def ensure(collection: JSONCollection)(implicit ec: ExecutionContext): F[Unit]
-  def createFromCollection(collection: JSONCollection)(implicit ec: ExecutionContext): EntityDAO[F, A]
+  def createFromCollection(collection: JSONCollection)(implicit ec: ExecutionContext, format: Format[A]): EntityDAO[Result, A]
 
   def create(cfg: Config, dbName: String, collectionName: String)(implicit ec: ExecutionContext,
                                                  sh: ShutdownHook,
                                                  F: Async[F],
-                                                 formatT: Format[A]): F[EntityDAO[F, A]] = {
+                                                 formatT: Format[A]): F[EntityDAO[Result, A]] = {
     val readPreference = cfg.as[Option[String]]("mongoDB.read-preference." + collectionName).fold[ReadPreference](ReadPreference.primary) {
       case "secondary" => ReadPreference.secondary
       case "primary"   => ReadPreference.primary
@@ -41,5 +44,5 @@ trait DAOFactory[F[_], A] {
 }
 
 trait IODAOFactory[A] extends DAOFactory[IO, A] {
-  def createFromCollection(collection: JSONCollection)(implicit ec: ExecutionContext): EntityDAO[IO, A] = IOEntityDAO[A]
+  def createFromCollection(collection: JSONCollection)(implicit ec: ExecutionContext, format: Format[A]): EntityDAO[Result, A] = new IOEntityDAO[A](collection)
 }

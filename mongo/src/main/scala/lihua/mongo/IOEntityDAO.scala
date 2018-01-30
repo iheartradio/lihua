@@ -7,8 +7,7 @@ package mongo
 
 import cats.data.{EitherT, NonEmptyList}
 import lihua.mongo.IOEntityDAO._
-import lihua.mongo.IOEntityDAO.DBError._
-
+import lihua.mongo.DBError._
 import play.api.libs.json.{Format, JsObject}
 import reactivemongo.play.json.collection.JSONCollection
 import reactivemongo.play.json._
@@ -17,7 +16,7 @@ import cats.implicits._
 import scala.concurrent.{Future, ExecutionContext => EC}
 import Result._
 import cats.effect.IO
-import lihua.mongo.EntityDAO.Query
+import EntityDAO.Query
 import reactivemongo.api.{Cursor, ReadPreference}
 import reactivemongo.api.Cursor.ErrorHandler
 import reactivemongo.api.commands.WriteResult
@@ -83,25 +82,6 @@ class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extend
 
 object IOEntityDAO {
 
-  sealed trait DBError extends Product with Serializable
-
-  object DBError {
-
-    case object NotFound extends DBError
-
-    case class DBException(throwable: Throwable) extends DBError
-
-    case class WriteError(details: NonEmptyList[WriteErrorDetail]) extends DBError
-
-    sealed trait WriteErrorDetail extends Product with Serializable {
-      def code: Int
-      def msg: String
-    }
-
-    case class ItemWriteErrorDetail(code: Int, msg: String) extends WriteErrorDetail
-    case class WriteConcernErrorDetail(code: Int, msg: String) extends WriteErrorDetail
-
-  }
 
   type Result[T] = EitherT[IO, DBError, T]
 
