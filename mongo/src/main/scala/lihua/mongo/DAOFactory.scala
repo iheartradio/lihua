@@ -16,12 +16,12 @@ import cats.implicits._
 trait DAOFactory[F[_], A] {
 
   def ensure(collection: JSONCollection)(implicit ec: ExecutionContext): F[Unit]
+  def createFromCollection(collection: JSONCollection): EntityDAO[F, A]
 
   def create(cfg: Config, dbName: String, collectionName: String)(implicit ec: ExecutionContext,
                                                  sh: ShutdownHook,
                                                  F: Async[F],
-                                                 formatT: Format[A]): F[EntityDAO[IOEntityDAO.Result, A]] = {
-
+                                                 formatT: Format[A]): F[EntityDAO[F, A]] = {
     val readPreference = cfg.as[Option[String]]("mongoDB.read-preference." + collectionName).fold[ReadPreference](ReadPreference.primary) {
       case "secondary" => ReadPreference.secondary
       case "primary"   => ReadPreference.primary
@@ -31,8 +31,10 @@ trait DAOFactory[F[_], A] {
       db <- toF(Mongo(cfg).database(dbName))
       collection = db.jsonCollection(collectionName, readPreference = readPreference)
       _ <- ensure(collection)
-    } yield new IOEntityDAO[A](collection)
+    } yield createFromCollection(collection)
   }
+
+
 
   protected def toF[B](f : => Future[B])(implicit F: Async[F], ec: ExecutionContext) : F[B] =
     IO.fromFuture(IO(f)).liftIO
