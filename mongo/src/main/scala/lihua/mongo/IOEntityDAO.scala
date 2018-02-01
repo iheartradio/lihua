@@ -17,14 +17,19 @@ import scala.concurrent.{Future, ExecutionContext => EC}
 import Result._
 import cats.effect.IO
 import EntityDAO.Query
+import cats.~>
+import mainecoon.FunctorK
 import reactivemongo.api.{Cursor, ReadPreference}
 import reactivemongo.api.Cursor.ErrorHandler
 import reactivemongo.api.commands.WriteResult
 
 import scala.concurrent.duration.FiniteDuration
-import scalacache._
-import modes.scalaFuture._
-import caffeine._
+import scalacache.Cache
+import scalacache.cachingF
+import scalacache.modes.scalaFuture._
+import scalacache.caffeine._
+import scala.util.control.NoStackTrace
+import cats.effect.implicits._
 
 class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extends EntityDAO[Result, T] {
   implicit val scalaCache: Cache[Vector[Entity[T]]] = CaffeineCache[Vector[Entity[T]]]
@@ -82,7 +87,6 @@ class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extend
 
 object IOEntityDAO {
 
-
   type Result[T] = EitherT[IO, DBError, T]
 
   object Result {
@@ -108,5 +112,31 @@ object IOEntityDAO {
         case e: Throwable => DBException(e).asLeft[T]
       })))
 
+  }
+
+  class MongoError(e: DBError) extends Exception with NoStackTrace
+
+  /**
+   * creates a DAO that use IO for error handling directly
+   */
+  def direct[F[_]: cats.effect.Async, A: Format](factory: DAOFactory[F],
+                                     dbName: String,
+                                     collectionName: String)
+                                    (ensure: JSONCollection => Future[_])
+                                    (implicit ec: EC): F[EntityDAO[IO, A]] = {
+    type DBResult[T] = EitherT[IO, DBError, T]
+    factory.createDAO(dbName = dbName, collectionName = collectionName) { collection =>
+
+      val fk = implicitly[FunctorK[EntityDAO[?[_], A]]]
+      val daoR: EntityDAO[DBResult, A] = new IOEntityDAO[A](collection)
+
+      val dao: EntityDAO[IO, A] = fk.mapK(daoR)(λ[DBResult ~> IO] { dr =>
+        dr.value.flatMap(_.fold(
+          e => IO.raiseError(e),
+          IO.pure
+        ))
+      })
+      IO.fromFuture(IO(ensure(collection))).liftIO[F].as(dao)
+    }
   }
 }

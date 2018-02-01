@@ -44,7 +44,7 @@ lazy val mainecoonSettings = Seq(
     ("org.scalameta" % "paradise" % "3.0.0-M10").cross(CrossVersion.full)
   ),
   libraryDependencies ++= Seq(
-    "com.kailuowang" %% "mainecoon-macros" % "0.6.0"
+    "com.kailuowang" %% "mainecoon-macros" % "0.6.2"
   )
 )
 
@@ -55,8 +55,7 @@ lazy val commonSettings = buildSettings ++ publishSettings ++ unidocCommonSettin
   parallelExecution in Test := false,
   sources in (Compile, doc) :=  Nil, //todo: somehow sbt doc hang, disable it for now so that I can release.
   crossScalaVersions := Seq(vAll.vers("scalac_2.11"), scalaVersion.value)
-
-)
+) ++ addCompilerPlugins(vAll, "kind-projector")
 
 lazy val commonJsSettings = Seq(scalaJSStage in Global := FastOptStage)
 
