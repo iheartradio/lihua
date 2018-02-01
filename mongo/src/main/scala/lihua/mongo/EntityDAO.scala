@@ -5,11 +5,11 @@
 package lihua.mongo
 
 import lihua.mongo.EntityDAO.Query
-import play.api.libs.json.{Format, JsObject, Json}
+import play.api.libs.json.{Format, JsObject, Json, Writes}
 import reactivemongo.api.{QueryOpts, ReadPreference}
 
 import scala.concurrent.duration.FiniteDuration
-import mainecoon.{finalAlg, autoFunctorK}
+import mainecoon.{autoFunctorK, finalAlg}
 
 /**
  * Final tagless encoding of the DAO Algebra
@@ -52,6 +52,8 @@ object EntityDAO {
     def idSelector(id: ObjectId): JsObject = Json.obj(idFieldName -> id)
 
     implicit def fromSelector(selector: JsObject): Query = Query(selector)
+
+    implicit def fromTuple[A : Writes](tps: (Symbol, A)*): Query = Query(JsObject(tps.map(p => (p._1.toString, Json.toJson(p._2)))))
 
     implicit def fromId(id: ObjectId): Query = idSelector(id)
 
