@@ -38,7 +38,7 @@ trait EntityDAO[F[_], T] {
 }
 
 object EntityDAO {
-  case class Query(
+  case class Query (
     selector:       JsObject,
     hint:           Option[JsObject]       = None,
     sort:           Option[JsObject]       = None,

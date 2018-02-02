@@ -33,8 +33,7 @@ lazy val mongo = project
       "com.typesafe.play" %% "play-json" % "2.6.2",
       "org.log4s" %% "log4s" % "1.3.4",
       "com.google.code.findbugs" % "jsr305" % "3.0.0", //needed by scalacache-caffeine
-      "io.estatico" %% "newtype" % "0.1.0",
-      "org.julienrf" %% "play-json-derived-codecs" % "4.0.0"
+      "io.estatico" %% "newtype" % "0.1.0"
     )
   )
 

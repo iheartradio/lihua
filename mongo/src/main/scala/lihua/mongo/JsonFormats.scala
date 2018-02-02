@@ -4,12 +4,22 @@
 */
 package lihua.mongo
 
+import cats.Invariant
+import io.estatico.newtype.BaseNewType
 import org.joda.time.DateTime
 import play.api.libs.json._
 
 import scala.reflect.ClassTag
 
 object JsonFormats {
+
+  implicit val invariantFormat: Invariant[Format] = new Invariant[Format] {
+    def imap[A, B](fa: Format[A])(f: A => B)(g: B => A): Format[B] = new Format[B] {
+      override def reads(json: JsValue): JsResult[B] = fa.reads(json).map(f)
+      override def writes(o: B): JsValue = fa.writes(g(o))
+    }
+  }
+
 
   implicit object JodaFormat extends Format[DateTime] {
 
@@ -48,18 +58,18 @@ object JsonFormats {
 
   private def myClassOf[T: ClassTag] = implicitly[ClassTag[T]].runtimeClass.asInstanceOf[Class[T]]
 
-  implicit def enumWrites[ET <: Enum[ET]]: Writes[ET] = Writes {
+  implicit def javaEnumWrites[ET <: Enum[ET]]: Writes[ET] = Writes {
     case r: Enum[_] ⇒ JsString(r.name())
   }
 
-  implicit def enumReads[ET <: Enum[ET]: ClassTag]: Reads[ET] = Reads {
+  implicit def javaEnumReads[ET <: Enum[ET]: ClassTag]: Reads[ET] = Reads {
     case JsString(name) ⇒
       JsSuccess(Enum.valueOf(myClassOf[ET], name))
     //TODO: improve error
     case _ ⇒ JsError("unrecognized format")
   }
 
-  implicit def enumFormats[ET <: Enum[ET]: ClassTag]: Format[ET] = Format(enumReads[ET], enumWrites[ET])
+  implicit def javaEnumFormats[ET <: Enum[ET]: ClassTag]: Format[ET] = Format(javaEnumReads[ET], javaEnumWrites[ET])
 
   trait StringParser[T] {
     def parse(s: String): T
@@ -75,4 +85,6 @@ object JsonFormats {
     }
   }
 
+  implicit def newTypeFormat[Base, Repr, Tag](implicit ev: Format[Repr]): Format[BaseNewType.Aux[Base, Tag, Repr]] =
+    ev.asInstanceOf[Format[BaseNewType.Aux[Base, Tag, Repr]]]
 }

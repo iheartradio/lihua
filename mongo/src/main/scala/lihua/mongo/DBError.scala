@@ -12,13 +12,20 @@ object DBError {
 
   case object NotFound extends DBError
 
-  case class DBException(throwable: Throwable) extends DBError
+  case class DBException(throwable: Throwable) extends DBError {
+    override def getCause: Throwable = throwable.getCause
 
-  case class WriteError(details: NonEmptyList[WriteErrorDetail]) extends DBError
+    override def getMessage: String =  throwable.getMessage
+  }
+
+  case class WriteError(details: NonEmptyList[WriteErrorDetail]) extends DBError {
+    override def getMessage: String =  details.toString()
+  }
 
   sealed trait WriteErrorDetail extends Product with Serializable {
     def code: Int
     def msg: String
+    override def toString: String = s"code: $code, message: $msg"
   }
 
   case class ItemWriteErrorDetail(code: Int, msg: String) extends WriteErrorDetail
