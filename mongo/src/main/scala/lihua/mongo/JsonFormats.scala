@@ -5,7 +5,6 @@
 package lihua.mongo
 
 import cats.Invariant
-import io.estatico.newtype.BaseNewType
 import org.joda.time.DateTime
 import play.api.libs.json._
 
@@ -85,6 +84,4 @@ object JsonFormats {
     }
   }
 
-  implicit def newTypeFormat[Base, Repr, Tag](implicit ev: Format[Repr]): Format[BaseNewType.Aux[Base, Tag, Repr]] =
-    ev.asInstanceOf[Format[BaseNewType.Aux[Base, Tag, Repr]]]
 }
