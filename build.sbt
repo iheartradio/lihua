@@ -29,12 +29,12 @@ lazy val mongo = project
       "org.reactivemongo" %% "reactivemongo-iteratees" % reactiveMongoVer,
       "com.iheart" %% "ficus" % "1.4.3",
       "com.github.cb372" %% "scalacache-caffeine" % "0.22.0",
+      "io.github.jmcardon" %% "tsec-symmetric-cipher" % "0.0.1-M7",
       "com.typesafe.play" %% "play-json" % "2.6.2",
       "org.log4s" %% "log4s" % "1.3.4",
       "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
     )
   )
-
 
 lazy val mainecoonSettings = Seq(
   addCompilerPlugin(
@@ -45,10 +45,10 @@ lazy val mainecoonSettings = Seq(
   )
 )
 
-
 lazy val buildSettings = sharedBuildSettings(gh, vAll)
 
 lazy val commonSettings = buildSettings ++ publishSettings ++ unidocCommonSettings ++ scoverageSettings ++ sharedCommonSettings ++ scalacAllSettings ++ Seq(
+  resolvers += Resolver.bintrayRepo("jmcardon", "tsec"),
   parallelExecution in Test := false,
   sources in (Compile, doc) :=  Nil, //todo: somehow sbt doc hang, disable it for now so that I can release.
   crossScalaVersions := Seq(vAll.vers("scalac_2.11"), scalaVersion.value),

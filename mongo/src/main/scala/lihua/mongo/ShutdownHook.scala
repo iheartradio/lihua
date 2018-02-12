@@ -10,6 +10,14 @@ trait ShutdownHook {
 
 
 object ShutdownHook {
+
+  /**
+    * a shutdownhook
+    */
+  object ignore extends ShutdownHook {
+    override def onShutdown[T](code: => T): Unit = ()
+  }
+
   object manual extends ShutdownHook {
     @volatile
     private var callbacks: List[() => _] = Nil

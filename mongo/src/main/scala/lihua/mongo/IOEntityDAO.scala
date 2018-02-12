@@ -122,10 +122,7 @@ object IOEntityDAO {
     type DBResult[T] = EitherT[IO, DBError, T]
     val fk = implicitly[FunctorK[EntityDAO[?[_], A]]]
     fk.mapK(daoR)(λ[DBResult ~> F] { dr =>
-      F.liftIO(dr.value).flatMap(_.fold(
-        e => F.raiseError(e),
-        F.pure
-      ))
+      F.liftIO(dr.value).flatMap(F.fromEither)
     })
 
   }

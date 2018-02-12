@@ -16,12 +16,14 @@ import reactivemongo.core.nodeset.Authenticate
 /**
  * Should be created one per application
  */
-class MongoDB[F[_]](config: Config)(implicit sh: ShutdownHook, F: Async[F]) {
+class MongoDB[F[_]](config: Config)(implicit F: Async[F], sh: ShutdownHook = ShutdownHook.ignore) {
   private val driver: F[MongoDriver] = F.liftIO(IO {
     val driver = MongoDriver(config.withFallback(ConfigFactory.load("default-reactive-mongo.conf")))
     sh.onShutdown(driver.close())
     driver
   })
+
+  def shutdown(): F[Unit] = driver.map(_.close()).void
 
   private val connection: F[MongoConnection] = {
     val hosts = config.getOrElse[List[String]]("mongoDB.hosts", Nil)
@@ -59,6 +61,5 @@ class MongoDB[F[_]](config: Config)(implicit sh: ShutdownHook, F: Async[F]) {
 
 object MongoDB {
   class MongoDBConfigurationException(msg: String) extends Exception(msg)
-
 }
 

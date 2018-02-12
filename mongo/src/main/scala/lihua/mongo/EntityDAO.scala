@@ -53,7 +53,7 @@ object EntityDAO {
 
     implicit def fromSelector(selector: JsObject): Query = Query(selector)
 
-    implicit def fromTuple[A : Writes](tps: (Symbol, A)*): Query = Query(JsObject(tps.map(p => (p._1.toString, Json.toJson(p._2)))))
+    implicit def fromTuples[A : Writes](tps: (Symbol, A)*): Query = Query(JsObject(tps.map(p => (p._1.toString, Json.toJson(p._2)))))
 
     implicit def fromId(id: ObjectId): Query = idSelector(id)
 
