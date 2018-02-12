@@ -4,7 +4,6 @@ addCommandAlias("gitSnapshots", ";set version in ThisBuild := git.gitDescribedVe
 
 val apache2 = "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.html")
 val gh = GitHubSettings(org = "iheartradio", proj = "lihua", publishOrg = "com.iheart", license = apache2)
-val devs = Seq(Dev("Kailuo Wang", "@kailuowang"))
 
 val vAll = Versions(versions, libraries, scalacPlugins)
 val reactiveMongoVer = "0.12.6"
@@ -52,14 +51,15 @@ lazy val buildSettings = sharedBuildSettings(gh, vAll)
 lazy val commonSettings = buildSettings ++ publishSettings ++ unidocCommonSettings ++ scoverageSettings ++ sharedCommonSettings ++ scalacAllSettings ++ Seq(
   parallelExecution in Test := false,
   sources in (Compile, doc) :=  Nil, //todo: somehow sbt doc hang, disable it for now so that I can release.
-  crossScalaVersions := Seq(vAll.vers("scalac_2.11"), scalaVersion.value)
+  crossScalaVersions := Seq(vAll.vers("scalac_2.11"), scalaVersion.value),
+  developers := List(Developer("@kailuowang", "Kailuo Wang", "kailuo.wang@gmail.com", new URL("http://kailuowang.com")))
 ) ++ addCompilerPlugins(vAll, "kind-projector")
 
 lazy val commonJsSettings = Seq(scalaJSStage in Global := FastOptStage)
 
 lazy val commonJvmSettings = Seq()
 
-lazy val publishSettings = sharedPublishSettings(gh, devs) ++ credentialSettings ++ sharedReleaseProcess
+lazy val publishSettings = sharedPublishSettings(gh) ++ credentialSettings ++ sharedReleaseProcess
 
 lazy val scoverageSettings = sharedScoverageSettings(60)
 
