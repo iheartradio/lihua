@@ -6,6 +6,9 @@ import tsec.cipher.symmetric._
 import tsec.cipher.symmetric.imports._
 import cats.implicits._
 
+import scala.io.StdIn
+import scala.util.Try
+
 class Crypt[F[_]](key: String)(implicit F: MonadError[F, Throwable]) {
 
   private def F[A](either: Either[Throwable, A]): F[A] = F.fromEither(either)
@@ -39,5 +42,18 @@ object Crypt {
       DefaultEncryptor.keyGen.generateKey().map(_.getEncoded.toB64String)
     )
 
-
+  def main(args: Array[String]): Unit = {
+    val command = args.headOption.getOrElse("usage: [genKey|encrypt]")
+    command match {
+      case "genKey" => genKey[Try].fold(println, println)
+      case "encrypt" =>
+        val key = StdIn.readLine("Enter your key:")
+        val pass = StdIn.readLine("Enter your text:")
+        new Crypt[Try](key).encrypt(pass).fold(println, println)
+      case "decrypt" =>
+        val key = StdIn.readLine("Enter your key:")
+        val pass = StdIn.readLine("Enter your text:")
+        new Crypt[Try](key).decrypt(pass).fold(println, println)
+    }
+  }
 }

@@ -6,7 +6,7 @@ package lihua.mongo
 import org.scalatest.{FunSuite, Matchers}
 import play.api.libs.json.{Format, Json}
 
-import concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class TaskEntityDAOTests extends FunSuite with Matchers {
   test("no side effect before performing unsafe IO with task") {

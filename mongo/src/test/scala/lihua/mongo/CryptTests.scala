@@ -1,9 +1,7 @@
-package com.iheart
-package mongo
+package lihua.mongo
 
-import lihua.mongo.Crypt
-import org.scalatest.{EitherValues, FunSuite, Matchers}
 import cats.implicits._
+import org.scalatest.{EitherValues, FunSuite, Matchers}
 
 class CryptTests extends FunSuite with Matchers with EitherValues {
   type F[A] = Either[Throwable, A]
@@ -19,7 +17,6 @@ class CryptTests extends FunSuite with Matchers with EitherValues {
     } yield decrypted
 
     result shouldBe Right(msg)
-
   }
 
 }

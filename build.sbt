@@ -21,7 +21,6 @@ lazy val mongo = project
   .settings(mainecoonSettings)
   .settings(addLibs(vAll, "cats-core", "cats-effect"))
   .settings(addTestLibs(vAll, "scalatest"))
-  .settings(simulacrumSettings(vAll))
   .settings(
     libraryDependencies ++= Seq(
       "org.reactivemongo" %% "reactivemongo" % reactiveMongoVer,
@@ -32,6 +31,7 @@ lazy val mongo = project
       "io.github.jmcardon" %% "tsec-symmetric-cipher" % "0.0.1-M7",
       "com.typesafe.play" %% "play-json" % "2.6.2",
       "org.log4s" %% "log4s" % "1.3.4",
+      "com.github.mpilquist" %% "simulacrum" % vAll.vers("simulacrum") % Provided,
       "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
     )
   )
