@@ -52,7 +52,7 @@ lazy val commonSettings = buildSettings ++ publishSettings ++ unidocCommonSettin
   resolvers += Resolver.bintrayRepo("jmcardon", "tsec"),
   parallelExecution in Test := false,
   sources in (Compile, doc) :=  Nil, //todo: somehow sbt doc hang, disable it for now so that I can release.
-  crossScalaVersions := Seq(vAll.vers("scalac_2.11"), scalaVersion.value),
+  crossScalaVersions := Seq(scalaVersion.value),
   developers := List(Developer("@kailuowang", "Kailuo Wang", "kailuo.wang@gmail.com", new URL("http://kailuowang.com")))
 ) ++ addCompilerPlugins(vAll, "kind-projector")
 
