@@ -37,6 +37,8 @@ class Crypt[F[_]](key: String)(implicit F: MonadError[F, Throwable]) {
 
 
 object Crypt {
+  def apply[F[_]](key: String)(implicit F: MonadError[F, Throwable]) = new Crypt[F](key)
+
   def genKey[F[_]](implicit F: MonadError[F, Throwable]) : F[String] =
     F.fromEither(
       DefaultEncryptor.keyGen.generateKey().map(_.getEncoded.toB64String)

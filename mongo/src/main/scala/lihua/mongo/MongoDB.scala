@@ -2,7 +2,7 @@ package lihua
 package mongo
 
 import com.typesafe.config.{Config, ConfigFactory}
-import reactivemongo.api.{DB, MongoConnection, MongoDriver, ReadPreference}
+import reactivemongo.api._
 import reactivemongo.play.json.collection.JSONCollection
 import cats.effect.{Async, IO}
 
@@ -24,8 +24,7 @@ import scala.util.Try
   */
 class MongoDB[F[_]](rootConfig: Config, cryptO: Option[Crypt[F]] = None)(
   implicit F: Async[F],
-          sh: ShutdownHook = ShutdownHook.ignore
-  ){
+          sh: ShutdownHook = ShutdownHook.ignore){
 
   val configF = F.suspend(F.fromTry(Try(rootConfig.as[MongoConfig]("mongoDB"))))
 
@@ -38,10 +37,18 @@ class MongoDB[F[_]](rootConfig: Config, cryptO: Option[Crypt[F]] = None)(
 
   private val connection: F[MongoConnection] = for {
     config <- configF
-    auths <- credentials(config.dbs)
+    auths <- credentials(config)
     c <- if (config.hosts.isEmpty)
            F.raiseError(new MongoDBConfigurationException("mongoDB.hosts must be set in the conf"))
-        else driver.map(_.connection(nodes = config.hosts, authentications = auths))
+        else driver.map(_.connection(
+      nodes = config.hosts,
+      authentications = auths.toSeq,
+      options = MongoConnectionOptions(
+        sslEnabled = config.sslEnabled,
+        authSource = config.authSource,
+        authMode = config.authMode
+      )
+    ))
   } yield c
 
   private def database(databaseName: String)(implicit ec: ExecutionContext): F[DB] =
@@ -53,13 +60,9 @@ class MongoDB[F[_]](rootConfig: Config, cryptO: Option[Crypt[F]] = None)(
       db <- toF(c.database(name))
     } yield db
 
-  private[mongo] def credentials(dbCfgs: Map[String, DBConfig]): F[List[Authenticate]] = {
-     dbCfgs.toList.collect {
-       case (name, DBConfig(dbName, _, Some(Credential(username, password)))) =>
-         (dbName.getOrElse(name), username, password)
-     }.traverse {
-       case (dbName, username, password) =>
-         cryptO.fold(F.pure(password))(_.decrypt(password)).map(Authenticate(dbName, username, _))
+  private[mongo] def credentials(cfg: MongoConfig): F[Option[Authenticate]] = {
+     cfg.credential.traverse { c =>
+       cryptO.fold(F.pure(c.password))(_.decrypt(c.password)).map(Authenticate(cfg.authSource.getOrElse("admin"), c.username, _))
      }
   }
 
@@ -82,14 +85,17 @@ object MongoDB {
   class MongoDBConfigurationException(msg: String) extends Exception(msg)
 
   case class MongoConfig(
-    hosts: List[String],
-    dbs: Map[String, DBConfig]
+    hosts: List[String] = Nil,
+    sslEnabled: Boolean = false,
+    authSource: Option[String] = None,
+    credential: Option[Credential] = None,
+    authMode: AuthenticationMode = ScramSha1Authentication,
+    dbs: Map[String, DBConfig] = Map()
   )
 
   case class DBConfig(
     name: Option[String],
     collections: Map[String, CollectionConfig],
-    credential: Option[Credential]
   )
 
   case class Credential(username: String, password: String)
@@ -103,7 +109,15 @@ object MongoDB {
     def read(config: Config, path: String): ReadPreference = config.getString(path) match {
       case "secondary" => ReadPreference.secondary
       case "primary" =>  ReadPreference.primary
-      case s => throw new MongoDBConfigurationException(s + " is not a recoganized read preference")
+      case s => throw new MongoDBConfigurationException(s + " is not a recognized read preference")
+    }
+  }
+
+  implicit val authenticationModeReader: ValueReader[AuthenticationMode] = new ValueReader[AuthenticationMode] {
+    def read(config: Config, path: String): AuthenticationMode = config.getString(path) match {
+      case "CR" => CrAuthentication
+      case "SCRAM-SHA-1" =>  ScramSha1Authentication
+      case s => throw new MongoDBConfigurationException(s + " is not a recognized Authentication Mode, Options are: CR, SCRAM-SHA-1")
     }
   }
 }

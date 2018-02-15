@@ -4,10 +4,39 @@ package mongo
 import cats.effect.IO
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{FunSuite, Matchers}
+import reactivemongo.core.nodeset.Authenticate
 
 class MongoDBTests extends FunSuite with Matchers {
   test("can read example config correctly") {
-    val config = new MongoDB[IO](ConfigFactory.load("example.conf")).configF
-    config.unsafeRunSync().dbs should not be(empty)
+    val mongoDB = new MongoDB[IO](ConfigFactory.parseString(
+      """
+        |mongoDB {
+        |  hosts: ["127.0.0.1:3661",  "127.0.0.1:3662"]
+        |  ssl-enabled: true
+        |  auth-source: admin
+        |  credential: {
+        |    username: alf
+        |    password: "L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg=="
+        |  }
+        |  dbs: {
+        |    school: {
+        |      name: schoolDB
+        |      collections: {
+        |        student: {
+        |          name: studentCollection
+        |          read-preference: "primary"
+        |        }
+        |      }
+        |    }
+        |  }
+        |}
+      """.stripMargin), Some(Crypt("RTbn5vu8T6u0Y3CTOJO65w==")))
+    val config = mongoDB.configF.unsafeRunSync()
+
+    config.dbs should not be(empty)
+    config.sslEnabled shouldBe true
+    config.authSource shouldBe Some("admin")
+    mongoDB.credentials(config).unsafeRunSync().head shouldBe Authenticate("admin", "alf", "cGFzc3dvcmQx")
+
   }
 }
