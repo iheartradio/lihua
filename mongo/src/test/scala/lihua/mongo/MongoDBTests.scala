@@ -7,6 +7,12 @@ import org.scalatest.{FunSuite, Matchers}
 import reactivemongo.core.nodeset.Authenticate
 
 class MongoDBTests extends FunSuite with Matchers {
+
+  object mockCrypt extends Crypt[IO] {
+    override def encrypt(value: String): IO[String] = ???
+    override def decrypt(value: String): IO[String] = IO(value + "decrypted")
+  }
+
   test("can read example config correctly") {
     val mongoDB = new MongoDB[IO](ConfigFactory.parseString(
       """
@@ -30,13 +36,14 @@ class MongoDBTests extends FunSuite with Matchers {
         |    }
         |  }
         |}
-      """.stripMargin), Some(Crypt("RTbn5vu8T6u0Y3CTOJO65w==")))
+      """.stripMargin), Some(mockCrypt))
     val config = mongoDB.configF.unsafeRunSync()
 
     config.dbs should not be(empty)
     config.sslEnabled shouldBe true
     config.authSource shouldBe Some("admin")
-    mongoDB.credentials(config).unsafeRunSync().head shouldBe Authenticate("admin", "alf", "cGFzc3dvcmQx")
+    mongoDB.credentials(config).unsafeRunSync().head shouldBe Authenticate("admin", "alf", "L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg==decrypted")
 
   }
 }
+
