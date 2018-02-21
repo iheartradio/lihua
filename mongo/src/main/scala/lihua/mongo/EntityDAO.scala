@@ -29,6 +29,8 @@ trait EntityDAO[F[_], T] {
 
   def find(query: Query): F[Vector[Entity[T]]]
 
+  def findOne(query: Query): F[Entity[T]]
+
   def findCached(query: Query, ttl: FiniteDuration): F[Vector[Entity[T]]]
 
   def remove(id: ObjectId): F[Unit]

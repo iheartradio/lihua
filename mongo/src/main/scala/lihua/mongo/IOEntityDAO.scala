@@ -16,8 +16,8 @@ import cats.implicits._
 import scala.concurrent.{Future, ExecutionContext => EC}
 import Result._
 import cats.effect.{Effect, IO}
-import EntityDAO.Query
-import cats.{ ~>}
+import EntityDAO.{ Query => Q }
+import cats.~>
 import mainecoon.FunctorK
 import reactivemongo.api.{Cursor, ReadPreference}
 import reactivemongo.api.Cursor.ErrorHandler
@@ -36,26 +36,37 @@ class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extend
   lazy val writeCollection = collection.withReadPreference(ReadPreference.primary)
 
   def get(id: ObjectId): Result[Entity[T]] = of(
-    collection.find(Query.idSelector(id)).one[Entity[T]]
+    collection.find(Q.idSelector(id)).one[Entity[T]]
   )
 
-  def find(q: Query): Result[Vector[Entity[T]]] = of {
+  def find(q: Q): Result[Vector[Entity[T]]] = of {
     internalFind(q)
   }
 
-  def invalidateCache(q: Query): Result[Unit] =
+  def findOne(q: Q): Result[Entity[T]] = of {
+    builder(q).one[Entity[T]](readPref(q))
+  }
+
+  def invalidateCache(q: Q): Result[Unit] =
     of(scalacache.remove(q)).as(())
 
-  private def internalFind(q: Query): Future[Vector[Entity[T]]] = {
+  private def internalFind(q: Q): Future[Vector[Entity[T]]] = {
+
+    builder(q).cursor[Entity[T]](readPref(q)).
+      collect[Vector](-1, errorHandler)
+  }
+
+  private def readPref(q: Q) = q.readPreference.getOrElse(collection.readPreference)
+
+  private def builder(q: Q) = {
     var builder = collection.find(q.selector)
     builder = q.hint.fold(builder)(builder.hint)
     builder = q.opts.fold(builder)(builder.options)
     builder = q.sort.fold(builder)(builder.sort)
-    builder.cursor[Entity[T]](q.readPreference.getOrElse(collection.readPreference)).
-      collect[Vector](-1, errorHandler)
+    builder
   }
 
-  def findCached(query: Query, ttl: FiniteDuration): Result[Vector[Entity[T]]] = of {
+  def findCached(query: Q, ttl: FiniteDuration): Result[Vector[Entity[T]]] = of {
     if (ttl.length == 0L)
       internalFind(query)
     else
@@ -70,10 +81,10 @@ class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extend
   }
 
   def remove(id: ObjectId): Result[Unit] =
-    removeAll(Query.idSelector(id)).ensure(NotFound)(_ > 0).void
+    removeAll(Q.idSelector(id)).ensure(NotFound)(_ > 0).void
 
   def update(entity: Entity[T]): Result[Entity[T]] = of {
-    writeCollection.update(Query.idSelector(entity._id), entity)
+    writeCollection.update(Q.idSelector(entity._id), entity)
   }.as(entity)
 
   def removeAll(selector: JsObject): Result[Int] = of {
