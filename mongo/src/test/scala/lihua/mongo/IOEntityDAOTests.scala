@@ -8,7 +8,7 @@ import play.api.libs.json.{Format, Json}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class TaskEntityDAOTests extends FunSuite with Matchers {
+class IOEntityDAOTests extends FunSuite with Matchers {
   test("no side effect before performing unsafe IO with task") {
     object testDAO extends IOEntityDAO[TestEntity](null)
 

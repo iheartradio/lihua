@@ -55,11 +55,25 @@ object EntityDAO {
 
     implicit def fromSelector(selector: JsObject): Query = Query(selector)
 
-    implicit def fromTuples[A : Writes](tps: (Symbol, A)*): Query = Query(JsObject(tps.map(p => (p._1.toString, Json.toJson(p._2)))))
+    implicit def fromField1[A : Writes](tp: (Symbol, A)): Query =
+      Query(Json.obj(tp._1.toString -> Json.toJson(tp._2)))
+
+    implicit def fromFields2[A : Writes, B: Writes](p: ((Symbol, A), (Symbol, B))): Query = p match {
+      case ((s1, a), (s2, b)) => Query(Json.obj(s1.toString -> a, s2.toString -> b))
+    }
+
+    implicit def fromFields3[A : Writes, B: Writes, C: Writes](p: ((Symbol, A), (Symbol, B), (Symbol, C))): Query = p match {
+      case ((s1, a), (s2, b), (s3, c)) => Query(Json.obj(s1.toString -> a, s2.toString -> b, s3.toString -> c))
+    }
+
+    implicit def fromFields4[A : Writes, B: Writes, C: Writes, D: Writes](p: ((Symbol, A), (Symbol, B), (Symbol, C), (Symbol, D))): Query = p match {
+      case ((s1, a), (s2, b), (s3, c), (s4, d)) => Query(Json.obj(s1.toString -> a, s2.toString -> b, s3.toString -> c, s4.toString -> d))
+    }
 
     implicit def fromId(id: ObjectId): Query = idSelector(id)
 
-    implicit def fromIds(ids: List[ObjectId]): Query = Json.obj(idFieldName -> Json.obj("$in" -> ids))
+    implicit def fromIds(ids: List[ObjectId]): Query =
+      Json.obj(idFieldName -> Json.obj("$in" -> ids))
 
     def byProperty[PT: Format](propertyName: String, propertyValue: PT) =
       Query(Json.obj(propertyName -> propertyValue))
