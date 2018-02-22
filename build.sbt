@@ -12,7 +12,7 @@ val reactiveMongoVer = "0.12.6"
 lazy val lihua = project.in(file("."))
   .settings(commonSettings)
   .settings(noPublishSettings)
-  .aggregate(mongo)
+  .aggregate(mongo, crypt)
 
 lazy val mongo = project
   .settings(name := "mongo")
