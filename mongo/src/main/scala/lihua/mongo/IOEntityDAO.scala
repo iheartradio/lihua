@@ -33,7 +33,7 @@ import scala.util.control.NoStackTrace
 class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extends EntityDAO[Result, T] {
   implicit val scalaCache: Cache[Vector[Entity[T]]] = CaffeineCache[Vector[Entity[T]]]
 
-  lazy val writeCollection = collection.withReadPreference(ReadPreference.primary)
+  lazy val writeCollection = collection.withReadPreference(ReadPreference.primary) //due to a bug in ReactiveMongo
 
   def get(id: ObjectId): Result[Entity[T]] = of(
     collection.find(Q.idSelector(id)).one[Entity[T]]
@@ -44,6 +44,10 @@ class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extend
   }
 
   def findOne(q: Q): Result[Entity[T]] = of {
+    builder(q).one[Entity[T]](readPref(q))
+  }
+
+  def findOneOption(q: Q): Result[Option[Entity[T]]] = of {
     builder(q).one[Entity[T]](readPref(q))
   }
 
