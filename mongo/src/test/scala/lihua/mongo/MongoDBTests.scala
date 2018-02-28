@@ -45,5 +45,24 @@ class MongoDBTests extends FunSuite with Matchers {
     mongoDB.credentials(config).unsafeRunSync().head shouldBe Authenticate("admin", "alf", "L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg==decrypted")
 
   }
+
+  test("can shutdown driver successfully") {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    implicit val ms = ShutdownHook.manual
+    val mongoDB = new MongoDB[IO](ConfigFactory.parseString(
+      """
+        |mongoDB {
+        |  hosts: ["127.0.0.1:27017"]
+        |}
+      """.stripMargin), Some(mockCrypt))
+
+    val process = for {
+      _ <- mongoDB.collection("test", "test")
+      _ <- IO(ms.shutdown())
+     } yield ()
+
+    process.unsafeRunSync()
+    succeed
+  }
 }
 

@@ -18,7 +18,9 @@ object ShutdownHook {
     override def onShutdown[T](code: => T): Unit = ()
   }
 
-  object manual extends ShutdownHook {
+
+
+  class Manual extends ShutdownHook {
     @volatile
     private var callbacks: List[() => _] = Nil
     override def onShutdown[T](code: => T): Unit = {
@@ -26,4 +28,6 @@ object ShutdownHook {
     }
     def shutdown(): Unit = callbacks.foreach(_())
   }
+
+  def manual = new Manual
 }
