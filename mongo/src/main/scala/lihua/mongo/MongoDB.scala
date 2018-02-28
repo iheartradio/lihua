@@ -33,13 +33,14 @@ class MongoDB[F[_]](rootConfig: Config, cryptO: Option[Crypt[F]] = None)(
       MongoDriver(rootConfig.withFallback(ConfigFactory.load("default-reactive-mongo.conf")))
     }.flatTap(d => F.pure(sh.onShutdown(d.close())))
 
-  def shutdown(): F[Unit] = driver.map(_.close()).void
+  def shutdown(): F[Unit] =
+    connection.map(_.close()) >> driver.map(_.close()).void
 
-  private val connection: F[MongoConnection] = for {
+  private val connection: F[MongoConnection] = (for {
     config <- configF
     auths <- credentials(config)
     c <- if (config.hosts.isEmpty)
-           F.raiseError(new MongoDBConfigurationException("mongoDB.hosts must be set in the conf"))
+           F.raiseError[MongoConnection](new MongoDBConfigurationException("mongoDB.hosts must be set in the conf"))
         else driver.map(_.connection(
       nodes = config.hosts,
       authentications = auths.toSeq,
@@ -49,7 +50,7 @@ class MongoDB[F[_]](rootConfig: Config, cryptO: Option[Crypt[F]] = None)(
         authMode = config.authMode
       )
     ))
-  } yield c
+  } yield c).flatTap(c => F.pure(sh.onShutdown(c.close())))
 
   private def database(databaseName: String)(implicit ec: ExecutionContext): F[DB] =
     for {
