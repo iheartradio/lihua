@@ -84,6 +84,10 @@ class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extend
     writeCollection.insert(entity).map(parseWriteResult(_).as(entity))
   }
 
+  def upsert(entity: Entity[T]): Result[Entity[T]] = of {
+    writeCollection.update(Q.idSelector(entity._id), entity, upsert = true)
+  }.as(entity)
+
   def remove(id: ObjectId): Result[Unit] =
     removeAll(Q.idSelector(id)).ensure(NotFound)(_ > 0).void
 

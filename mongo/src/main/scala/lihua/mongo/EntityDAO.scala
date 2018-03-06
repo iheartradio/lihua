@@ -25,6 +25,8 @@ trait EntityDAO[F[_], T] {
 
   def update(entity: Entity[T]): F[Entity[T]]
 
+  def upsert(entity: Entity[T]): F[Entity[T]]
+
   def invalidateCache(query: Query): F[Unit]
 
   def find(query: Query): F[Vector[Entity[T]]]
