@@ -43,7 +43,7 @@ class MongoDB[F[_]](rootConfig: Config, cryptO: Option[Crypt[F]] = None)(
       authentications = auths.toSeq,
       options = MongoConnectionOptions(
         sslEnabled = config.sslEnabled,
-        authSource = config.authSource,
+        authenticationDatabase = config.authSource,
         authMode = config.authMode
       )
     ))

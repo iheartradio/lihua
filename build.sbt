@@ -6,7 +6,7 @@ val apache2 = "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.h
 val gh = GitHubSettings(org = "iheartradio", proj = "lihua", publishOrg = "com.iheart", license = apache2)
 
 val vAll = Versions(versions, libraries, scalacPlugins)
-val reactiveMongoVer = "0.12.6"
+val reactiveMongoVer = "0.13.0"
 
 
 lazy val lihua = project.in(file("."))
