@@ -64,5 +64,6 @@ class MongoDBTests extends FunSuite with Matchers {
     process.unsafeRunSync()
     succeed
   }
+
 }
 

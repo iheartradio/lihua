@@ -1,6 +1,7 @@
 package lihua
 package mongo
 
+import cats.Eval
 import com.typesafe.config.{Config, ConfigFactory}
 import reactivemongo.api._
 import reactivemongo.play.json.collection.JSONCollection
@@ -26,12 +27,15 @@ class MongoDB[F[_]](rootConfig: Config, cryptO: Option[Crypt[F]] = None)(
   implicit F: Async[F],
           sh: ShutdownHook = ShutdownHook.ignore){
 
-  val configF = F.suspend(F.fromTry(Try(rootConfig.as[MongoConfig]("mongoDB"))))
+  val configF = F.fromTry(Try(rootConfig.as[MongoConfig]("mongoDB")))
 
-  private val driver: F[MongoDriver] =
-    F.delay {
-      MongoDriver(rootConfig.withFallback(ConfigFactory.load("default-reactive-mongo.conf")))
-    }.flatTap(d => F.pure(sh.onShutdown(d.close())))
+  private[mongo] val driver: F[MongoDriver] = {
+    IO.eval(Eval.later { //todo: this might not be a good idea. A more proper way might be https://github.com/functional-streams-for-scala/fs2/blob/series/0.10/core/shared/src/main/scala/fs2/async/async.scala#L118
+      val d = MongoDriver(rootConfig.withFallback(ConfigFactory.load("default-reactive-mongo.conf")))
+      sh.onShutdown(d.close())
+      d
+    }).liftIO
+  }
 
   private val connection: F[MongoConnection] = for {
     config <- configF

@@ -22,7 +22,7 @@ object ShutdownHook {
 
   class Manual extends ShutdownHook {
     @volatile
-    private var callbacks: List[() => _] = Nil
+    private[mongo] var callbacks: List[() => _] = Nil
     override def onShutdown[T](code: => T): Unit = {
       callbacks = (() => code) :: callbacks
     }
