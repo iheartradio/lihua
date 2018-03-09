@@ -21,17 +21,18 @@ class IOEntityDAOTests extends FunSuite with Matchers {
   }
 
   test("MongoDB driver is created only once") {
+    import scala.concurrent.ExecutionContext.Implicits.global
     implicit val ms = ShutdownHook.manual
-    implicit val mongoDB = new MongoDB[IO](ConfigFactory.parseString(
+    implicit val mongoDB = MongoDB[IO](ConfigFactory.parseString(
       """
         |mongoDB {
         |  hosts: ["127.0.0.1:27017"]
         |}
-      """.stripMargin), None)
+      """.stripMargin), None).unsafeRunSync()
 
     (for {
-      _ <- mongoDB.driver
-      _ <- mongoDB.driver
+      _ <- mongoDB.collection("test", "test")
+      _ <- mongoDB.collection("test", "test2")
       _ <- IO(ms.shutdown())
     } yield ()).unsafeRunSync()
 
