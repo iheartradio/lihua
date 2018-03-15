@@ -1,11 +1,10 @@
 package lihua
 package mongo
 
-import cats.{Functor}
 import com.typesafe.config.{Config, ConfigFactory}
 import reactivemongo.api._
 import reactivemongo.play.json.collection.JSONCollection
-import cats.effect.{Async, IO, LiftIO}
+import cats.effect.{Async, IO, Sync}
 
 import scala.concurrent.{ExecutionContext, Future}
 import net.ceedubs.ficus.Ficus._
@@ -16,13 +15,14 @@ import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import net.ceedubs.ficus.readers.ValueReader
 import reactivemongo.core.nodeset.Authenticate
 
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
-
+import concurrent.duration._
 /**
   * A MongoDB instance from config
   * Should be created one per application
   */
-class MongoDB[F[_]: Functor : LiftIO] private(private[mongo] val config: MongoDB.MongoConfig, connection: MongoConnection) {
+class MongoDB[F[_]: Async] private(private[mongo] val config: MongoDB.MongoConfig, connection: MongoConnection, driver: MongoDriver) {
 
   private def database(databaseName: String)(implicit ec: ExecutionContext): F[DB] = {
     val dbConfigO = config.dbs.get(s"$databaseName")
@@ -39,8 +39,11 @@ class MongoDB[F[_]: Functor : LiftIO] private(private[mongo] val config: MongoDB
     database(dbName).map(
       db => new JSONCollection(db, name, db.failoverStrategy, readPreference.getOrElse(ReadPreference.primary))
     )
-
   }
+
+  def close(implicit to: FiniteDuration = 2.seconds, ex: ExecutionContext): F[Unit] =
+    toF(connection.askClose()).void >> Sync[F].delay(driver.close(to))
+
   protected def toF[B](f : => Future[B])(implicit ec: ExecutionContext) : F[B] =
     IO.fromFuture(IO(f)).liftIO
 }
@@ -79,7 +82,7 @@ object MongoDB {
             authMode = config.authMode
           )
         )
-        new MongoDB(config, connection)
+        new MongoDB(config, connection, d)
       }
     }
 
@@ -102,7 +105,7 @@ object MongoDB {
 
   case class DBConfig(
     name: Option[String],
-    collections: Map[String, CollectionConfig],
+    collections: Map[String, CollectionConfig]
   )
 
   case class Credential(username: String, password: String)
