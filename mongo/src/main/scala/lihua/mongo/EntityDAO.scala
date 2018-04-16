@@ -11,6 +11,7 @@ import reactivemongo.api.{QueryOpts, ReadPreference}
 import scala.concurrent.duration.FiniteDuration
 import mainecoon.{autoFunctorK, finalAlg}
 
+
 /**
  * Final tagless encoding of the DAO Algebra
  * @tparam F effect Monad
@@ -44,6 +45,8 @@ trait EntityDAO[F[_], T] {
 }
 
 object EntityDAO {
+
+
   case class Query (
     selector:       JsObject,
     hint:           Option[JsObject]       = None,
