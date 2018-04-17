@@ -6,7 +6,6 @@ package lihua
 package mongo
 
 import cats.data.{EitherT, NonEmptyList}
-
 import lihua.mongo.DBError._
 import play.api.libs.json.{Format, JsObject}
 import reactivemongo.play.json.collection.JSONCollection
@@ -14,7 +13,7 @@ import reactivemongo.play.json._
 import cats.implicits._
 
 import scala.concurrent.{Future, ExecutionContext => EC}
-import cats.effect.{IO, LiftIO, Async}
+import cats.effect.{Async, IO, LiftIO}
 import EntityDAO.{Query => Q}
 import cats.{MonadError, ~>}
 import mainecoon.FunctorK
@@ -27,8 +26,8 @@ import scalacache.Cache
 import scalacache.cachingF
 import scalacache.modes.scalaFuture._
 import scalacache.caffeine._
-import scala.util.control.NoStackTrace
 
+import scala.util.control.NoStackTrace
 
 
 class SyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit ex: EC)
@@ -103,6 +102,7 @@ class SyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit
   def removeAll(selector: JsObject): R[Int] = of {
     writeCollection.remove(selector)
   }
+
 
   private val errorHandler: ErrorHandler[Vector[Entity[T]]] = Cursor.FailOnError()
 

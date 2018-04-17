@@ -1,10 +1,10 @@
 package lihua.mongo
 
-import cats.Monad
-import cats.effect.{IO, Async}
+import cats.effect.{Async, IO}
 import play.api.libs.json.Format
 import reactivemongo.play.json.collection.JSONCollection
 import cats.implicits._
+import reactivemongo.api.commands.CommandError
 
 import scala.concurrent.ExecutionContext
 
@@ -14,14 +14,21 @@ trait DAOFactory[F[_], DAOF[_], A] {
 
 abstract class DAOFactoryWithEnsure[A :Format, DAOF[_], F[_]](
   dbName: String, collectionName: String)
-  (implicit F: Monad[F])
+  (implicit F: Async[F])
   extends DAOFactory[F, DAOF, A] {
 
   protected def ensure(collection: JSONCollection): F[Unit]
 
+  private def ensureCollection(collection: JSONCollection)(implicit  ec: ExecutionContext): F[Unit] =
+    F.liftIO(IO.fromFuture(IO(collection.create().recover {
+      case CommandError.Code(48 /*NamespaceExists*/ ) => ()
+    })))
+
+
   def create(implicit mongoDB: MongoDB[F], ec: ExecutionContext): F[EntityDAO[DAOF, A]] = {
     for {
       c <- mongoDB.collection(dbName, collectionName)
+      _ <- ensureCollection(c)
       _ <- ensure(c)
       dao <- doCreate(c)
     } yield dao
