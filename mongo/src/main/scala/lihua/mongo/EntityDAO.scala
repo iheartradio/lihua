@@ -44,6 +44,7 @@ trait EntityDAO[F[_], T] {
 
   def removeAll(selector: JsObject): F[Int]
 
+  def update(query: Query, entity: Entity[T], upsert: Boolean): F[Entity[T]] = update(query.selector, entity, upsert)
 }
 
 object EntityDAO {

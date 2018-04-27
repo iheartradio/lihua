@@ -129,8 +129,10 @@ object SyncEntityDAO {
       f.map(parseWriteResult(_))
 
     def parseWriteResult(wr: WriteResult): Either[DBError, Int] = {
-      val errs: List[WriteErrorDetail] = wr.writeErrors.toList.map(e => ItemWriteErrorDetail(e.code, e.errmsg)) ++
-        wr.writeConcernError.toList.map(e => WriteConcernErrorDetail(e.code, e.errmsg))
+      val errs: List[WriteErrorDetail] =
+        wr.writeErrors.toList.map(e => ItemWriteErrorDetail(e.code, e.errmsg)) ++
+        wr.writeConcernError.toList.map(e => WriteConcernErrorDetail(e.code, e.errmsg)) ++
+        (if(wr.n == 0) List(UpdatedCountErrorDetail) else Nil)
       NonEmptyList.fromList(errs).map(WriteError).toLeft(wr.n)
     }
 
