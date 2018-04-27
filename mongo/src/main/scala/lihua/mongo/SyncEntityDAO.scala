@@ -88,15 +88,18 @@ class SyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit
     writeCollection.insert(entity).map(parseWriteResult(_).as(entity))
   }
 
-  def upsert(entity: Entity[T]): R[Entity[T]] = of {
-    writeCollection.update(Q.idSelector(entity._id), entity, upsert = true)
-  }.as(entity)
-
   def remove(id: ObjectId): R[Unit] =
     removeAll(Q.idSelector(id)).ensure(NotFound)(_ > 0).void
 
-  def update(entity: Entity[T]): R[Entity[T]] = of {
-    writeCollection.update(Q.idSelector(entity._id), entity)
+  def upsert(entity: Entity[T]): R[Entity[T]] =
+    update(Q.idSelector(entity._id), entity, true)
+
+  def update(entity: Entity[T]): R[Entity[T]] =
+    update(Q.idSelector(entity._id), entity, false)
+
+
+  def update(selector: JsObject, entity: Entity[T], upsert: Boolean): R[Entity[T]] = of {
+    writeCollection.update(selector, entity)
   }.as(entity)
 
   def removeAll(selector: JsObject): R[Int] = of {

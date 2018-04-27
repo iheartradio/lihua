@@ -26,6 +26,8 @@ trait EntityDAO[F[_], T] {
 
   def update(entity: Entity[T]): F[Entity[T]]
 
+  def update(selector: JsObject, entity: Entity[T], upsert: Boolean): F[Entity[T]]
+
   def upsert(entity: Entity[T]): F[Entity[T]]
 
   def invalidateCache(query: Query): F[Unit]
