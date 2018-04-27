@@ -99,7 +99,7 @@ class SyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit
 
 
   def update(selector: JsObject, entity: Entity[T], upsert: Boolean): R[Entity[T]] = of {
-    writeCollection.update(selector, entity)
+    writeCollection.update(selector, entity, upsert = upsert)
   }.as(entity)
 
   def removeAll(selector: JsObject): R[Int] = of {
