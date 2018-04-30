@@ -2,10 +2,6 @@ package lihua.mongo
 
 import cats.data.NonEmptyList
 
-import scala.util.control.NoStackTrace
-
-
-
 sealed trait DBError extends Throwable with Product with Serializable
 
 object DBError {
