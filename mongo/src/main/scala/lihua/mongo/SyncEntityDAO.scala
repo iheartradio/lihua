@@ -106,7 +106,6 @@ class SyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit
     writeCollection.remove(selector)
   }
 
-
   private val errorHandler: ErrorHandler[Vector[Entity[T]]] = Cursor.FailOnError()
 
 }

@@ -6,7 +6,7 @@ import scala.util.control.NoStackTrace
 
 
 
-sealed trait DBError extends Throwable with Product with Serializable with NoStackTrace
+sealed trait DBError extends Throwable with Product with Serializable
 
 object DBError {
 
