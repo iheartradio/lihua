@@ -111,7 +111,7 @@ class SyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit
 
   def of[A](f: => Future[Either[DBError, A]]): Result[F, A] =
     EitherT(Async[F].liftIO(IO.fromFuture(IO(f.recover {
-      case e: Throwable => DBException(e, "Collection: " + collection.name).asLeft[A]
+      case e: Throwable => DBException(e, collection.name).asLeft[A]
     }))))
 }
 
