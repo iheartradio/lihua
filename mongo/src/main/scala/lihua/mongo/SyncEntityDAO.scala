@@ -13,9 +13,10 @@ import reactivemongo.play.json._
 import cats.implicits._
 
 import scala.concurrent.{Future, ExecutionContext => EC}
-import cats.effect.{Async, IO, LiftIO}
+import cats.effect.{Async, IO}
 import EntityDAO.{Query => Q}
 import cats.{MonadError, ~>}
+import lihua.mongo.SyncEntityDAO.Result
 import mainecoon.FunctorK
 import reactivemongo.api.{Cursor, ReadPreference}
 import reactivemongo.api.Cursor.ErrorHandler
@@ -108,6 +109,10 @@ class SyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit
 
   private val errorHandler: ErrorHandler[Vector[Entity[T]]] = Cursor.FailOnError()
 
+  def of[A](f: => Future[Either[DBError, A]]): Result[F, A] =
+    EitherT(Async[F].liftIO(IO.fromFuture(IO(f.recover {
+      case e: Throwable => DBException(e, "Collection: " + collection.name).asLeft[A]
+    }))))
 }
 
 object SyncEntityDAO {
@@ -135,10 +140,7 @@ object SyncEntityDAO {
       NonEmptyList.fromList(errs).map(WriteError).toLeft(wr.n)
     }
 
-    def of[T, F[_]](f: => FE[T])(implicit ec: EC, F: LiftIO[F]): Result[F, T] =
-      EitherT(F.liftIO(IO.fromFuture(IO(f.recover {
-        case e: Throwable => DBException(e).asLeft[T]
-      }))))
+
 
   }
   /**

@@ -8,10 +8,10 @@ object DBError {
 
   case object NotFound extends DBError
 
-  case class DBException(throwable: Throwable) extends DBError {
+  case class DBException(throwable: Throwable, extraMsg: String = "") extends DBError {
     override def getCause: Throwable = throwable.getCause
 
-    override def getMessage: String =  throwable.getMessage
+    override def getMessage: String =  throwable.getMessage + " " + extraMsg
   }
 
   case class WriteError(details: NonEmptyList[WriteErrorDetail]) extends DBError {
