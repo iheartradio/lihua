@@ -49,7 +49,7 @@ lazy val crypt = project
   .settings(
     resolvers += Resolver.bintrayRepo("jmcardon", "tsec"),
     libraryDependencies ++= Seq(
-      "io.github.jmcardon" %% "tsec-symmetric-cipher" % "0.0.1-M7"
+      "io.github.jmcardon" %% "tsec-cipher-jca" % "0.0.1-M11"
     ))
 
 lazy val mainecoonSettings = Seq(
@@ -66,7 +66,7 @@ lazy val buildSettings = sharedBuildSettings(gh, vAll)
 lazy val commonSettings = buildSettings ++ publishSettings ++ unidocCommonSettings ++ scoverageSettings ++ sharedCommonSettings ++ scalacAllSettings ++ Seq(
   parallelExecution in Test := false,
   sources in (Compile, doc) :=  Nil, //todo: somehow sbt doc hang, disable it for now so that I can release.
-  crossScalaVersions := Seq(scalaVersion.value),
+  crossScalaVersions := Seq(vAll.vers("scalac_2.11"), scalaVersion.value),
   developers := List(Developer("@kailuowang", "Kailuo Wang", "kailuo.wang@gmail.com", new URL("http://kailuowang.com")))
 ) ++ addCompilerPlugins(vAll, "kind-projector")
 

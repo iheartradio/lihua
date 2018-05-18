@@ -1,11 +1,11 @@
 package lihua
 package crypt
 
-import cats.implicits._
+import cats.effect.IO
 import org.scalatest.{EitherValues, FunSuite, Matchers}
 
 class CryptTests extends FunSuite with Matchers with EitherValues {
-  type F[A] = Either[Throwable, A]
+  type F[A] = IO[A]
 
 
   test("identity") {
@@ -17,7 +17,7 @@ class CryptTests extends FunSuite with Matchers with EitherValues {
       decrypted <- c.decrypt(encrypted)
     } yield decrypted
 
-    result shouldBe Right(msg)
+    result.unsafeRunSync() shouldBe msg
   }
 
 }

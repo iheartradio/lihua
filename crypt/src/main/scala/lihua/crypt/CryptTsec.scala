@@ -1,63 +1,75 @@
 package lihua
 package crypt
 
-import cats.MonadError
+import cats.effect.{IO, Sync}
 import lihua.mongo.Crypt
 import tsec.cipher.symmetric.PlainText
-import tsec.cipher.symmetric.imports.{AES128, DefaultEncryptor, SecretKey}
 import tsec.common._
-import tsec.cipher.symmetric.imports._
+import tsec.cipher.symmetric._
+import tsec.cipher.symmetric.jca._
+
 import scala.io.StdIn
-import scala.util.Try
 import cats.implicits._
 
-class CryptTsec[F[_]](key: String)(implicit F: MonadError[F, Throwable]) extends Crypt[F] {
+class CryptTsec[F[_]](key: String)(implicit F: Sync[F]) extends Crypt[F] {
 
-  private def F[A](either: Either[Throwable, A]): F[A] = F.fromEither(either)
+  private val ekeyF: F[SecretKey[AES128CTR]] =
+    AES128CTR.buildKey[F](key.base64Bytes)
 
-  private val instanceF = F(DefaultEncryptor.instance)
-  private val ekeyF: F[SecretKey[AES128]] =
-    F(DefaultEncryptor.keyGen.buildKey(key.base64Bytes))
+  implicit val ctrStrategy: IvGen[F, AES128CTR] = AES128CTR.defaultIvStrategy[F]
 
-  def encrypt(value: String): F[String] = {
-    for {
-      instance  <- instanceF
-      ekey      <- ekeyF
-      encrypted <- F(instance.encrypt(PlainText(value.utf8Bytes), ekey))
-    } yield (encrypted.content ++ encrypted.iv).toB64String
-  }
+  def encrypt(value: String): F[String] =
+    AES128CTR
+      .genEncryptor[F]
+      .flatMap(
+        implicit instance =>
+          for {
+            ekey      <- ekeyF
+            encrypted <- AES128CTR.encrypt[F](PlainText(value.utf8Bytes), ekey)
+          } yield (encrypted.content ++ encrypted.nonce).toB64String
+    )
 
-  def decrypt(value: String): F[String] = {
-    for {
-      instance <- instanceF
-      ekey <- ekeyF
-      toDecrypt <- F(DefaultEncryptor.fromSingleArray(value.base64Bytes))
-      decrypted <- F(instance.decrypt(toDecrypt, ekey))
-    } yield decrypted.content.toUtf8String
-  }
+  def decrypt(value: String): F[String] =
+    AES128CTR
+      .genEncryptor[F]
+      .flatMap(
+        implicit instance =>
+          for {
+            ekey <- ekeyF
+            toDecrypt <- F.fromEither(AES128CTR.ciphertextFromConcat(value.base64Bytes))
+            decrypted <- AES128CTR.decrypt[F](toDecrypt, ekey)
+          } yield decrypted.toUtf8String
+  )
 }
 
 
 object CryptTsec {
-  def apply[F[_]](key: String)(implicit F: MonadError[F, Throwable]): Crypt[F] = new CryptTsec[F](key)
+  def apply[F[_]: Sync](key: String): Crypt[F] = new CryptTsec[F](key)
 
-  def genKey[F[_]](implicit F: MonadError[F, Throwable]) : F[String] =
-    F.fromEither(
-      DefaultEncryptor.keyGen.generateKey().map(_.getEncoded.toB64String)
-    )
+  def genKey[F[_]: Sync] : F[String] =
+      AES128CTR.generateKey[F].map(_.getEncoded.toB64String)
+
 
   def main(args: Array[String]): Unit = {
-    val command = args.headOption.getOrElse("usage: [genKey|encrypt]")
-    command match {
-      case "genKey" => genKey[Try].fold(println, println)
-      case "encrypt" =>
-        val key = StdIn.readLine("Enter your key:")
-        val pass = StdIn.readLine("Enter your text:")
-        CryptTsec[Try](key).encrypt(pass).fold(println, println)
-      case "decrypt" =>
-        val key = StdIn.readLine("Enter your key:")
-        val pass = StdIn.readLine("Enter your text:")
-        CryptTsec[Try](key).decrypt(pass).fold(println, println)
+    val command = args.headOption match {
+      case Some("genKey") => genKey[IO]
+      case Some("encrypt") =>
+        for {
+          key <- IO(StdIn.readLine("Enter your key:"))
+          pass <- IO(StdIn.readLine("Enter your text:"))
+          r <- CryptTsec[IO](key).encrypt(pass)
+        } yield r
+
+
+      case Some("decrypt") =>
+        for {
+           key <- IO(StdIn.readLine("Enter your key:"))
+           pass <- IO(StdIn.readLine("Enter your text:"))
+           r <- CryptTsec[IO](key).decrypt(pass)
+        } yield r
+      case _ => IO.pure("usage: [genKey|encrypt]")
     }
+
+    command.attempt.map(_.fold(println, println)).unsafeRunSync()
   }
 }
