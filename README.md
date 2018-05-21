@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/iheartradio/lihua.svg?branch=master)](https://travis-ci.org/iheartradio/lihua
+
 ### WIP
 
 #### Principled NoSql DB Access Layer
