@@ -79,7 +79,8 @@ object MongoDB {
           options = MongoConnectionOptions(
             sslEnabled = config.sslEnabled,
             authenticationDatabase = config.authSource,
-            authMode = config.authMode
+            authMode = config.authMode,
+            readPreference = config.readPreference.getOrElse(ReadPreference.primaryPreferred)
           )
         )
         new MongoDB(config, connection, d)
@@ -100,7 +101,8 @@ object MongoDB {
     authSource: Option[String] = None,
     credential: Option[Credential] = None,
     authMode: AuthenticationMode = ScramSha1Authentication,
-    dbs: Map[String, DBConfig] = Map()
+    dbs: Map[String, DBConfig] = Map(),
+    readPreference: Option[ReadPreference]
   )
 
   case class DBConfig(
@@ -118,7 +120,9 @@ object MongoDB {
   implicit val readPreferenceValueReader: ValueReader[ReadPreference] = new ValueReader[ReadPreference] {
     def read(config: Config, path: String): ReadPreference = config.getString(path) match {
       case "secondary" => ReadPreference.secondary
+      case "secondary-preferred" => ReadPreference.secondaryPreferred
       case "primary" =>  ReadPreference.primary
+      case "primary-preferred" =>  ReadPreference.primaryPreferred
       case s => throw new MongoDBConfigurationException(s + " is not a recognized read preference")
     }
   }

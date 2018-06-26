@@ -4,6 +4,7 @@ package mongo
 import cats.effect.IO
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{FunSuite, Matchers}
+import reactivemongo.api.ReadPreference
 import reactivemongo.core.nodeset.Authenticate
 
 class MongoDBTests extends FunSuite with Matchers {
@@ -20,6 +21,7 @@ class MongoDBTests extends FunSuite with Matchers {
         |  hosts: ["127.0.0.1:3661",  "127.0.0.1:3662"]
         |  ssl-enabled: true
         |  auth-source: admin
+        |  read-preference: secondary
         |  credential: {
         |    username: alf
         |    password: "L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg=="
@@ -42,6 +44,7 @@ class MongoDBTests extends FunSuite with Matchers {
     config.dbs should not be(empty)
     config.sslEnabled shouldBe true
     config.authSource shouldBe Some("admin")
+    config.readPreference shouldBe Some(ReadPreference.secondary)
     MongoDB.authOf(config, Some(mockCrypt)).unsafeRunSync().head shouldBe Authenticate("admin", "alf", "L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg==decrypted")
 
   }
