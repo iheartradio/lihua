@@ -54,10 +54,10 @@ lazy val crypt = project
 
 lazy val mainecoonSettings = Seq(
   addCompilerPlugin(
-    ("org.scalameta" % "paradise" % "3.0.0-M10").cross(CrossVersion.full)
+    ("org.scalameta" % "paradise" % "3.0.0-M11").cross(CrossVersion.full)
   ),
   libraryDependencies ++= Seq(
-    "com.kailuowang" %% "mainecoon-macros" % "0.6.2"
+    "com.kailuowang" %% "mainecoon-macros" % "0.6.3"
   )
 )
 

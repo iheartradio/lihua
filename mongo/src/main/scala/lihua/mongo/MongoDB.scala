@@ -8,7 +8,6 @@ import cats.effect.{Async, IO, Sync}
 
 import scala.concurrent.{ExecutionContext, Future}
 import net.ceedubs.ficus.Ficus._
-import cats.effect.implicits._
 import cats.implicits._
 import net.ceedubs.ficus.readers.namemappers.implicits.hyphenCase
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
@@ -45,7 +44,7 @@ class MongoDB[F[_]: Async] private(private[mongo] val config: MongoDB.MongoConfi
     toF(connection.askClose()).void >> Sync[F].delay(driver.close(to))
 
   protected def toF[B](f : => Future[B])(implicit ec: ExecutionContext) : F[B] =
-    IO.fromFuture(IO(f)).liftIO
+    IO.fromFuture(IO(f)).to[F]
 }
 
 
