@@ -41,7 +41,7 @@ class MongoDB[F[_]: Async] private(private[mongo] val config: MongoDB.MongoConfi
   }
 
   def close(implicit to: FiniteDuration = 2.seconds, ex: ExecutionContext): F[Unit] =
-    toF(connection.askClose()).void >> Sync[F].delay(driver.close(to))
+    Sync[F].delay(driver.close(to))
 
   protected def toF[B](f : => Future[B])(implicit ec: ExecutionContext) : F[B] =
     IO.fromFuture(IO(f)).to[F]
