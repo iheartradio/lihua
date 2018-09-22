@@ -47,7 +47,6 @@ lazy val crypt = project
   .settings(addLibs(vAll, "cats-core"))
   .settings(addTestLibs(vAll, "scalatest"))
   .settings(
-    resolvers += Resolver.bintrayRepo("jmcardon", "tsec"),
     libraryDependencies ++= Seq(
       "io.github.jmcardon" %% "tsec-cipher-jca" % "0.0.1-M11"
     ))
