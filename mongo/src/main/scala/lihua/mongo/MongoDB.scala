@@ -79,7 +79,10 @@ object MongoDB {
             sslEnabled = config.sslEnabled,
             authenticationDatabase = config.authSource,
             authMode = config.authMode,
-            readPreference = config.readPreference.getOrElse(ReadPreference.primaryPreferred)
+            readPreference = config.readPreference.getOrElse(ReadPreference.primaryPreferred),
+            failoverStrategy =  FailoverStrategy.default.copy(
+                                  initialDelay = config.initialDelay.getOrElse(FailoverStrategy.default.initialDelay),
+                                  retries = config.retries.getOrElse(FailoverStrategy.default.retries))
           )
         )
         new MongoDB(config, connection, d)
@@ -101,7 +104,9 @@ object MongoDB {
     credential: Option[Credential] = None,
     authMode: AuthenticationMode = ScramSha1Authentication,
     dbs: Map[String, DBConfig] = Map(),
-    readPreference: Option[ReadPreference]
+    readPreference: Option[ReadPreference],
+    initialDelay: Option[FiniteDuration],
+    retries: Option[Int]
   )
 
   case class DBConfig(

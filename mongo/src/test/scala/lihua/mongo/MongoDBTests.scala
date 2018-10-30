@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.{FunSuite, Matchers}
 import reactivemongo.api.ReadPreference
 import reactivemongo.core.nodeset.Authenticate
-
+import concurrent.duration._
 class MongoDBTests extends FunSuite with Matchers {
 
   object mockCrypt extends Crypt[IO] {
@@ -21,6 +21,8 @@ class MongoDBTests extends FunSuite with Matchers {
         |  hosts: ["127.0.0.1:3661",  "127.0.0.1:3662"]
         |  ssl-enabled: true
         |  auth-source: admin
+        |  initial-delay: 3s
+        |  retries: 14
         |  read-preference: secondary
         |  credential: {
         |    username: alf
@@ -44,6 +46,8 @@ class MongoDBTests extends FunSuite with Matchers {
     config.dbs should not be(empty)
     config.sslEnabled shouldBe true
     config.authSource shouldBe Some("admin")
+    config.retries shouldBe Some(14)
+    config.initialDelay shouldBe Some(3.seconds)
     config.readPreference shouldBe Some(ReadPreference.secondary)
     MongoDB.authOf(config, Some(mockCrypt)).unsafeRunSync().head shouldBe Authenticate("admin", "alf", "L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg==decrypted")
 
