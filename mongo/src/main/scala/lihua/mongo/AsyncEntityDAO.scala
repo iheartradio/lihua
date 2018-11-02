@@ -7,20 +7,20 @@ package mongo
 
 import cats.data.{EitherT, NonEmptyList}
 import lihua.mongo.DBError._
-import play.api.libs.json.{Format, JsObject}
+import play.api.libs.json.{Format}
 import reactivemongo.play.json.collection.JSONCollection
 import reactivemongo.play.json._
 import cats.implicits._
 
 import scala.concurrent.{Future, ExecutionContext => EC}
 import cats.effect.{Async, IO}
-import EntityDAO.{Query => Q}
 import cats.{MonadError, ~>}
-import lihua.mongo.SyncEntityDAO.Result
-import mainecoon.FunctorK
+import lihua.mongo.AsyncEntityDAO.Result
+import cats.tagless.FunctorK
 import reactivemongo.api.{Cursor, ReadPreference}
 import reactivemongo.api.Cursor.ErrorHandler
 import reactivemongo.api.commands.WriteResult
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration.FiniteDuration
 import scalacache.Cache
@@ -29,45 +29,48 @@ import scalacache.modes.scalaFuture._
 import scalacache.caffeine._
 
 import scala.util.control.NoStackTrace
+import JsonFormats._
 
 
-class SyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit ex: EC)
-  extends EntityDAO[SyncEntityDAO.Result[F, ?], T] {
-  type R[A] = SyncEntityDAO.Result[F, A]
-  import SyncEntityDAO.Result._
+class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit ex: EC)
+  extends EntityDAO[AsyncEntityDAO.Result[F, ?], T, Query] {
+  type R[A] = AsyncEntityDAO.Result[F, A]
+  import AsyncEntityDAO.Result._
 
   implicit val scalaCache: Cache[Vector[Entity[T]]] = CaffeineCache[Vector[Entity[T]]]
 
   lazy val writeCollection = collection.withReadPreference(ReadPreference.primary) //due to a bug in ReactiveMongo
 
+  def idQuery(id: ObjectId): Query = Query.idSelector(id)
+
   def get(id: ObjectId): R[Entity[T]] = of(
-    collection.find(Q.idSelector(id)).one[Entity[T]]
+    collection.find(Query.idSelector(id)).one[Entity[T]]
   )
 
-  def find(q: Q): R[Vector[Entity[T]]] = of {
+  def find(q: Query): R[Vector[Entity[T]]] = of {
     internalFind(q)
   }
 
-  def findOne(q: Q): R[Entity[T]] = of {
+  def findOne(q: Query): R[Entity[T]] = of {
     builder(q).one[Entity[T]](readPref(q))
   }
 
-  def findOneOption(q: Q): R[Option[Entity[T]]] = of {
+  def findOneOption(q: Query): R[Option[Entity[T]]] = of {
     builder(q).one[Entity[T]](readPref(q))
   }
 
-  def invalidateCache(q: Q): R[Unit] =
+  def invalidateCache(q: Query): R[Unit] =
     of(scalacache.remove(q)).as(())
 
-  private def internalFind(q: Q): Future[Vector[Entity[T]]] = {
+  private def internalFind(q: Query): Future[Vector[Entity[T]]] = {
 
     builder(q).cursor[Entity[T]](readPref(q)).
       collect[Vector](-1, errorHandler)
   }
 
-  private def readPref(q: Q) = q.readPreference.getOrElse(collection.readPreference)
+  private def readPref(q: Query) = q.readPreference.getOrElse(collection.readPreference)
 
-  private def builder(q: Q) = {
+  private def builder(q: Query) = {
     var builder = collection.find(q.selector)
     builder = q.hint.fold(builder)(builder.hint)
     builder = q.opts.fold(builder)(builder.options)
@@ -75,7 +78,7 @@ class SyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit
     builder
   }
 
-  def findCached(query: Q, ttl: FiniteDuration): R[Vector[Entity[T]]] = of {
+  def findCached(query: Query, ttl: FiniteDuration): R[Vector[Entity[T]]] = of {
     if (ttl.length == 0L)
       internalFind(query)
     else
@@ -85,26 +88,26 @@ class SyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit
   }
 
   def insert(t: T): R[Entity[T]] = of {
-    val entity = Entity(ObjectId.generate, t)
+    val entity = Entity(BSONObjectID.generate.stringify, t)
     writeCollection.insert(entity).map(parseWriteResult(_).as(entity))
   }
 
   def remove(id: ObjectId): R[Unit] =
-    removeAll(Q.idSelector(id)).ensure(NotFound)(_ > 0).void
+    removeAll(Query.idSelector(id)).ensure(NotFound)(_ > 0).void
 
   def upsert(entity: Entity[T]): R[Entity[T]] =
-    update(Q.idSelector(entity._id), entity, true)
+    update(Query.idSelector(entity._id), entity, true)
 
   def update(entity: Entity[T]): R[Entity[T]] =
-    update(Q.idSelector(entity._id), entity, false)
+    update(Query.idSelector(entity._id), entity, false)
 
 
-  def update(selector: JsObject, entity: Entity[T], upsert: Boolean): R[Entity[T]] = of {
-    writeCollection.update(selector, entity, upsert = upsert)
+  def update(q: Query, entity: Entity[T], upsert: Boolean): R[Entity[T]] = of {
+    writeCollection.update(q.selector, entity, upsert = upsert)
   }.as(entity)
 
-  def removeAll(selector: JsObject): R[Int] = of {
-    writeCollection.remove(selector)
+  def removeAll(q: Query): R[Int] = of {
+    writeCollection.remove(q.selector)
   }
 
   private val errorHandler: ErrorHandler[Vector[Entity[T]]] = Cursor.FailOnError()
@@ -115,7 +118,7 @@ class SyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit
     }))))
 }
 
-object SyncEntityDAO {
+object AsyncEntityDAO {
   type Result[F[_], T] = EitherT[F, DBError, T]
 
   class MongoError(e: DBError) extends RuntimeException with NoStackTrace
@@ -146,9 +149,9 @@ object SyncEntityDAO {
   /**
    * creates a DAO that use F for error handling directly
    */
-  def direct[F[_], A: Format](daoR: SyncEntityDAO[A, F])(implicit ec: EC, F: MonadError[F, Throwable]): EntityDAO[F, A] = {
+  def direct[F[_], A: Format](daoR: AsyncEntityDAO[A, F])(implicit ec: EC, F: MonadError[F, Throwable]): EntityDAO[F, A, Query] = {
     type DBResult[T] = EitherT[F, DBError, T]
-    val fk = implicitly[FunctorK[EntityDAO[?[_], A]]]
+    val fk = implicitly[FunctorK[EntityDAO[?[_], A, Query]]]
     fk.mapK(daoR)(λ[DBResult ~> F] { dr =>
       dr.value.flatMap(F.fromEither)
     })
@@ -156,6 +159,6 @@ object SyncEntityDAO {
   }
 }
 
-class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extends SyncEntityDAO[T, IO](collection)
+class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extends AsyncEntityDAO[T, IO](collection)
 
 

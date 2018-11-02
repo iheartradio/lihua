@@ -1,4 +1,5 @@
-package lihua.mongo
+package lihua
+package mongo
 
 import cats.data.NonEmptyList
 

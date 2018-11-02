@@ -2,15 +2,38 @@
 * Copyright [2017] [iHeartMedia Inc]
 * All rights reserved
 */
-package lihua.mongo
+package lihua
+package mongo
 
 import cats.Invariant
+import lihua.ObjectId
+import lihua.ObjectId.toObjectId
 import org.joda.time.DateTime
+import play.api.libs.json.Json.toJson
 import play.api.libs.json._
 
 import scala.reflect.ClassTag
 
 object JsonFormats {
+
+  implicit object ObjectIdFormat extends Format[ObjectId] {
+
+    override def reads(json: JsValue): JsResult[ObjectId] = (json \ "$oid").validate[String].map(toObjectId)
+
+    override def writes(o: ObjectId): JsValue = Json.obj("$oid" → o.value)
+  }
+
+
+  implicit def entityFormat[T: Format]: OFormat[Entity[T]] = new OFormat[Entity[T]] {
+    def writes(e: Entity[T]): JsObject =
+      toJson(e.data).as[JsObject] + ("_id" -> toJson(e._id))
+
+    def reads(json: JsValue): JsResult[Entity[T]] = for {
+      id <- (json \ "_id").validate[ObjectId]
+      t <- json.validate[T]
+    } yield Entity(id, t)
+  }
+
 
   implicit val invariantFormat: Invariant[Format] = new Invariant[Format] {
     def imap[A, B](fa: Format[A])(f: A => B)(g: B => A): Format[B] = new Format[B] {

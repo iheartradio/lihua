@@ -2,7 +2,8 @@
 * Copyright [2017] [iHeartMedia Inc]
 * All rights reserved
 */
-package lihua.mongo
+package lihua
+package mongo
 import cats.effect.IO
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{FunSuite, Matchers}

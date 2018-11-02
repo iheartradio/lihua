@@ -1,6 +1,7 @@
-package lihua.mongo
+package lihua
+package mongo
 
-import mainecoon.{autoFunctorK, finalAlg}
+import cats.tagless.{autoFunctorK, finalAlg}
 
 @autoFunctorK(autoDerivation = true) @finalAlg
 trait Crypt[F[_]] {

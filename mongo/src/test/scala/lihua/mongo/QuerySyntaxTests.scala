@@ -1,6 +1,6 @@
-package lihua.mongo
+package lihua
+package mongo
 
-import lihua.mongo.EntityDAO.Query
 import org.scalatest.{FunSuite, Matchers}
 import play.api.libs.json.Json
 
