@@ -47,15 +47,10 @@ abstract class DirectDAOFactory[A: Format, F[_]](dbName: String, collectionName:
     F.delay(AsyncEntityDAO.direct[F, A](new AsyncEntityDAO(c)))
 }
 
-abstract class IODAOFactory[A :Format, DAOF[_]](dbName: String, collectionName: String)
-  extends DAOFactoryWithEnsure[A, DAOF, IO](dbName, collectionName)
+abstract class EitherTDAOFactory[A: Format, F[_]](dbName: String, collectionName: String)
+                                                (implicit F: Async[F])
+  extends DAOFactoryWithEnsure[A, AsyncEntityDAO.Result[F, ?], F](dbName, collectionName) {
 
-
-abstract class IODirectDAOFactory[A: Format](dbName: String, collectionName: String)
-                              extends DirectDAOFactory[A, IO](dbName, collectionName)
-
-abstract class IOEitherTDAOFactory[A: Format](dbName: String, collectionName: String)
-                              extends IODAOFactory[A, AsyncEntityDAO.Result[IO, ?]](dbName, collectionName) {
-  def doCreate(c: JSONCollection)(implicit ec: ExecutionContext): IO[IOEntityDAO[A]] =
-    IO(new IOEntityDAO(c))
+  def doCreate(c: JSONCollection)(implicit ec: ExecutionContext): F[EntityDAO[AsyncEntityDAO.Result[F, ?], A, Query]] =
+    F.pure(new AsyncEntityDAO[A, F](c))
 }

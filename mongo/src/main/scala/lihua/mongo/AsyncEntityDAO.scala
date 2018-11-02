@@ -22,7 +22,7 @@ import reactivemongo.api.Cursor.ErrorHandler
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.Duration
 import scalacache.Cache
 import scalacache.cachingF
 import scalacache.modes.scalaFuture._
@@ -41,8 +41,6 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
 
   lazy val writeCollection = collection.withReadPreference(ReadPreference.primary) //due to a bug in ReactiveMongo
 
-  def idQuery(id: ObjectId): Query = Query.idSelector(id)
-
   def get(id: ObjectId): R[Entity[T]] = of(
     collection.find(Query.idSelector(id)).one[Entity[T]]
   )
@@ -60,7 +58,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
   }
 
   def invalidateCache(q: Query): R[Unit] =
-    of(scalacache.remove(q)).as(())
+    of(scalacache.remove(q)).void
 
   private def internalFind(q: Query): Future[Vector[Entity[T]]] = {
 
@@ -78,7 +76,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
     builder
   }
 
-  def findCached(query: Query, ttl: FiniteDuration): R[Vector[Entity[T]]] = of {
+  def findCached(query: Query, ttl: Duration): R[Vector[Entity[T]]] = of {
     if (ttl.length == 0L)
       internalFind(query)
     else
@@ -158,7 +156,4 @@ object AsyncEntityDAO {
 
   }
 }
-
-class IOEntityDAO[T: Format](collection: JSONCollection)(implicit ex: EC) extends AsyncEntityDAO[T, IO](collection)
-
 

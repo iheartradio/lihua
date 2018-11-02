@@ -11,10 +11,11 @@ import play.api.libs.json.{Format, Json}
 import reactivemongo.play.json.collection.JSONCollection
 
 
-class IOEntityDAOTests extends FunSuite with Matchers {
+
+class EntityDAOTests extends FunSuite with Matchers {
   test("no side effect before performing unsafe IO with task") {
     import scala.concurrent.ExecutionContext.Implicits.global
-    object testDAO extends IOEntityDAO[TestEntity](null)
+    object testDAO extends AsyncEntityDAO[TestEntity, IO](null)
 
     testDAO.find(Json.obj("1" -> "1")) //nothing should really happens
 
@@ -41,10 +42,14 @@ class IOEntityDAOTests extends FunSuite with Matchers {
     succeed
 
   }
+
+  test("contramap") {
+    cats.Contravariant[EntityDAO[IO, TestEntity, ?]]
+  }
 }
 
 
-class TestEntityDAO extends IODirectDAOFactory[TestEntity]("test", "test") {
+class TestEntityDAO extends DirectDAOFactory[TestEntity, IO]("test", "test") {
   override protected def ensure(collection: JSONCollection): IO[Unit] = IO.unit
 }
 

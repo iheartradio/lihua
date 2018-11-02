@@ -1,13 +1,14 @@
 package lihua
 package mongo
 
+import cats.effect.IO
 import org.scalatest.{FunSuite, Matchers}
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class QuerySyntaxTests extends FunSuite with Matchers {
-  object testDAO extends IOEntityDAO[TestEntity](null)
+  object testDAO extends AsyncEntityDAO[TestEntity, IO](null)
 
   test("tuples") {
     testDAO.find('a -> "1")
