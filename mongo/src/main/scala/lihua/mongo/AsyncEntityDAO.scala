@@ -87,7 +87,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
 
   def insert(t: T): R[Entity[T]] = of {
     val entity = Entity(BSONObjectID.generate.stringify, t)
-    writeCollection.insert(entity).map(parseWriteResult(_).as(entity))
+    writeCollection.insert(entity).map(parseWriteResult(_).ensure(UpdatedCountErrorDetail)(_ == 1).as(entity))
   }
 
   def remove(id: ObjectId): R[Unit] =
@@ -112,6 +112,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
 
   def of[A](f: => Future[Either[DBError, A]]): Result[F, A] =
     EitherT(Async[F].liftIO(IO.fromFuture(IO(f.recover {
+      case l: reactivemongo.api.commands.LastError => DBLastError(l.message).asLeft[A]
       case e: Throwable => DBException(e, collection.name).asLeft[A]
     }))))
 }
@@ -136,14 +137,11 @@ object AsyncEntityDAO {
     def parseWriteResult(wr: WriteResult): Either[DBError, Int] = {
       val errs: List[WriteErrorDetail] =
         wr.writeErrors.toList.map(e => ItemWriteErrorDetail(e.code, e.errmsg)) ++
-        wr.writeConcernError.toList.map(e => WriteConcernErrorDetail(e.code, e.errmsg)) ++
-        (if(wr.n == 0) List(UpdatedCountErrorDetail) else Nil)
+        wr.writeConcernError.toList.map(e => WriteConcernErrorDetail(e.code, e.errmsg))
       NonEmptyList.fromList(errs).map(WriteError).toLeft(wr.n)
     }
-
-
-
   }
+
   /**
    * creates a DAO that use F for error handling directly
    */

@@ -14,6 +14,7 @@ object DBError {
 
     override def getMessage: String =  s"Error occurred (collection: $collection): ${throwable.getMessage} "
   }
+  case class DBLastError(override val getMessage: String) extends DBError
 
   case class WriteError(details: NonEmptyList[WriteErrorDetail]) extends DBError {
     override def getMessage: String =  details.toString()
@@ -28,7 +29,7 @@ object DBError {
   case class ItemWriteErrorDetail(code: Int, msg: String) extends WriteErrorDetail
   case object UpdatedCountErrorDetail extends WriteErrorDetail {
     val code = 0
-    val msg = "updated count is 0, nothing gets updated"
+    val msg = "updated count is 0, nothing got updated"
   }
   case class WriteConcernErrorDetail(code: Int, msg: String) extends WriteErrorDetail
 
