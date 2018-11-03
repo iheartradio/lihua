@@ -27,10 +27,11 @@ object DBError {
   }
 
   case class ItemWriteErrorDetail(code: Int, msg: String) extends WriteErrorDetail
-  case object UpdatedCountErrorDetail extends WriteErrorDetail {
-    val code = 0
-    val msg = "updated count is 0, nothing got updated"
-  }
   case class WriteConcernErrorDetail(code: Int, msg: String) extends WriteErrorDetail
+
+  case class UpdatedCountErrorDetail(expectedCount: Int) extends DBError {
+    override def getMessage = "updated count is 0, expected " + expectedCount
+  }
+
 
 }

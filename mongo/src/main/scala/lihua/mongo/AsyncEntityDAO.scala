@@ -87,7 +87,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
 
   def insert(t: T): R[Entity[T]] = of {
     val entity = Entity(BSONObjectID.generate.stringify, t)
-    writeCollection.insert(entity).map(parseWriteResult(_).ensure(UpdatedCountErrorDetail)(_ == 1).as(entity))
+    writeCollection.insert(entity).map(parseWriteResult(_).ensure(UpdatedCountErrorDetail(1))(_ == 1).as(entity))
   }
 
   def remove(id: ObjectId): R[Unit] =
