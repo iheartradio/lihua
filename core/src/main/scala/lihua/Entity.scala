@@ -1,3 +1,3 @@
 package lihua
 
-case class Entity[T](_id: ObjectId, data: T)
+case class Entity[T](_id: EntityId, data: T)

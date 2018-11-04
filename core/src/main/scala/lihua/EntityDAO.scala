@@ -12,7 +12,7 @@ import scala.concurrent.duration.Duration
 @autoFunctorK(autoDerivation = true) @finalAlg
 trait EntityDAO[F[_], T, Query] {
 
-  def get(id: ObjectId): F[Entity[T]]
+  def get(id: EntityId): F[Entity[T]]
 
   def insert(t: T): F[Entity[T]]
 
@@ -30,7 +30,7 @@ trait EntityDAO[F[_], T, Query] {
 
   def findCached(query: Query, ttl: Duration): F[Vector[Entity[T]]]
 
-  def remove(id: ObjectId): F[Unit]
+  def remove(id: EntityId): F[Unit]
 
   def removeAll(query: Query): F[Int]
 
@@ -47,7 +47,7 @@ trait EntityDAO[F[_], T, Query] {
 object EntityDAO {
   implicit def contravriantEntityDAO[F[_], T]: Contravariant[EntityDAO[F, T, ?]] = new Contravariant[EntityDAO[F, T, ?]] {
     def contramap[A, B](ea: EntityDAO[F, T, A])(f: B => A): EntityDAO[F, T, B] = new EntityDAO[F, T, B] {
-      def get(id: ObjectId): F[Entity[T]] = ea.get(id)
+      def get(id: EntityId): F[Entity[T]] = ea.get(id)
 
       def insert(t: T): F[Entity[T]] = ea.insert(t)
 
@@ -70,7 +70,7 @@ object EntityDAO {
       def findCached(query: B, ttl: Duration): F[Vector[Entity[T]]] =
         ea.findCached(f(query), ttl)
 
-      def remove(id: ObjectId): F[Unit] = ea.remove(id)
+      def remove(id: EntityId): F[Unit] = ea.remove(id)
 
       def removeAll(query: B): F[Int] = ea.removeAll(f(query))
 

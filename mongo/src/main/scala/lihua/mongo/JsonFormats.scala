@@ -6,8 +6,8 @@ package lihua
 package mongo
 
 import cats.Invariant
-import lihua.ObjectId
-import lihua.ObjectId.toObjectId
+import lihua.EntityId
+import lihua.EntityId.toEntityId
 import org.joda.time.DateTime
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
@@ -16,11 +16,11 @@ import scala.reflect.ClassTag
 
 object JsonFormats {
 
-  implicit object ObjectIdFormat extends Format[ObjectId] {
+  implicit object EntityIdFormat extends Format[EntityId] {
 
-    override def reads(json: JsValue): JsResult[ObjectId] = (json \ "$oid").validate[String].map(toObjectId)
+    override def reads(json: JsValue): JsResult[EntityId] = (json \ "$oid").validate[String].map(toEntityId)
 
-    override def writes(o: ObjectId): JsValue = Json.obj("$oid" → o.value)
+    override def writes(o: EntityId): JsValue = Json.obj("$oid" → o.value)
   }
 
 
@@ -29,7 +29,7 @@ object JsonFormats {
       toJson(e.data).as[JsObject] + ("_id" -> toJson(e._id))
 
     def reads(json: JsValue): JsResult[Entity[T]] = for {
-      id <- (json \ "_id").validate[ObjectId]
+      id <- (json \ "_id").validate[EntityId]
       t <- json.validate[T]
     } yield Entity(id, t)
   }
@@ -65,7 +65,7 @@ object JsonFormats {
   }
 
   implicit class JsPathMongoDBOps(val self: JsPath) extends AnyVal {
-    def formatObjectId = OFormat[String](self.read[ObjectId].map(_.value), OWrites[String] { s ⇒ self.write[ObjectId].writes(ObjectId(s)) })
+    def formatEntityId = OFormat[String](self.read[EntityId].map(_.value), OWrites[String] { s ⇒ self.write[EntityId].writes(EntityId(s)) })
   }
 
   implicit def mapFormat[KT: StringParser, VT: Format]: Format[Map[KT, VT]] = new Format[Map[KT, VT]] {

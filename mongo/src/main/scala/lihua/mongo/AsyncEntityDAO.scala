@@ -41,7 +41,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
 
   lazy val writeCollection = collection.withReadPreference(ReadPreference.primary) //due to a bug in ReactiveMongo
 
-  def get(id: ObjectId): R[Entity[T]] = of(
+  def get(id: EntityId): R[Entity[T]] = of(
     collection.find(Query.idSelector(id)).one[Entity[T]]
   )
 
@@ -92,7 +92,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
     }.ensureOr(UpdatedCountErrorDetail(1, _))(_ == 1).as(entity)
   }
 
-  def remove(id: ObjectId): R[Unit] =
+  def remove(id: EntityId): R[Unit] =
     removeAll(Query.idSelector(id)).ensure(NotFound)(_ > 0).void
 
   def upsert(entity: Entity[T]): R[Entity[T]] =
