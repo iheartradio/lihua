@@ -61,7 +61,7 @@ lazy val taglessSettings = Seq(
     ("org.scalameta" % "paradise" % "3.0.0-M11").cross(CrossVersion.full)
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-tagless-macros" % "0.1.1-SNAPSHOT"
+    "org.typelevel" %% "cats-tagless-macros" % "0.1.0"
   )
 )
 
