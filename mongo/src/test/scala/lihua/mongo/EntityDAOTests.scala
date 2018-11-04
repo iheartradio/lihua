@@ -9,12 +9,12 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.{FunSuite, Matchers}
 import play.api.libs.json.{Format, Json}
 import reactivemongo.play.json.collection.JSONCollection
+import scala.concurrent.ExecutionContext.Implicits.global
 
 
 
 class EntityDAOTests extends FunSuite with Matchers {
   test("no side effect before performing unsafe IO with task") {
-    import scala.concurrent.ExecutionContext.Implicits.global
     object testDAO extends AsyncEntityDAO[TestEntity, IO](null)
 
     testDAO.find(Json.obj("1" -> "1")) //nothing should really happens
@@ -22,15 +22,16 @@ class EntityDAOTests extends FunSuite with Matchers {
     succeed
   }
 
-  test("MongoDB driver is created only once") {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    implicit val ms = ShutdownHook.manual
-    implicit val mongoDB = MongoDB[IO](ConfigFactory.parseString(
+  lazy val localConfig = ConfigFactory.parseString(
       """
         |mongoDB {
         |  hosts: ["127.0.0.1:27017"]
         |}
-      """.stripMargin), None).unsafeRunSync()
+      """.stripMargin)
+
+  test("MongoDB driver is created only once") {
+    implicit val ms = ShutdownHook.manual
+    implicit val mongoDB = MongoDB[IO](localConfig, None).unsafeRunSync()
 
     (for {
       _ <- mongoDB.collection("test", "test")
@@ -43,13 +44,28 @@ class EntityDAOTests extends FunSuite with Matchers {
 
   }
 
+  test("CRUD smoke") {
+    val (retrieved, tryRetrieve) = MongoDB.resource[IO](localConfig).use { implicit mongoDB =>
+      for {
+        dao <- TestEntityDAOFactory.create
+        inserted <- dao.insert(TestEntity("blah"))
+        retrieved <- dao.get(inserted._id)
+        _ <- dao.remove(inserted._id)
+        tryFind <- dao.findOneOption(Query.idSelector(inserted._id))
+      } yield (retrieved, tryFind)
+    }.unsafeRunSync()
+
+    retrieved.data.a shouldBe "blah"
+    tryRetrieve shouldBe empty
+  }
+
   test("contramap") {
     cats.Contravariant[EntityDAO[IO, TestEntity, ?]]
   }
 }
 
 
-class TestEntityDAO extends DirectDAOFactory[TestEntity, IO]("test", "test") {
+object TestEntityDAOFactory extends DirectDAOFactory[TestEntity, IO]("test", "test") {
   override protected def ensure(collection: JSONCollection): IO[Unit] = IO.unit
 }
 

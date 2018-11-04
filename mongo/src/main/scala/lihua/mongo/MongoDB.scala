@@ -4,7 +4,7 @@ package mongo
 import com.typesafe.config.{Config, ConfigFactory}
 import reactivemongo.api._
 import reactivemongo.play.json.collection.JSONCollection
-import cats.effect.{Async, IO, Sync}
+import cats.effect.{Async, IO, Resource, Sync}
 
 import scala.concurrent.{ExecutionContext, Future}
 import net.ceedubs.ficus.Ficus._
@@ -21,7 +21,7 @@ import concurrent.duration._
   * A MongoDB instance from config
   * Should be created one per application
   */
-class MongoDB[F[_]: Async] private(private[mongo] val config: MongoDB.MongoConfig, connection: MongoConnection, driver: MongoDriver) {
+class MongoDB[F[_]: Async] private(private[mongo] val config: MongoDB.MongoConfig, connection: MongoConnection, private[mongo] val driver: MongoDriver) {
 
   private def database(databaseName: String)(implicit ec: ExecutionContext): F[DB] = {
     val dbConfigO = config.dbs.get(s"$databaseName")
@@ -40,7 +40,7 @@ class MongoDB[F[_]: Async] private(private[mongo] val config: MongoDB.MongoConfi
     )
   }
 
-  def close(implicit to: FiniteDuration = 2.seconds, ex: ExecutionContext): F[Unit] =
+  def close(implicit to: FiniteDuration = 2.seconds): F[Unit] =
     Sync[F].delay(driver.close(to))
 
   protected def toF[B](f : => Future[B])(implicit ec: ExecutionContext) : F[B] =
@@ -57,19 +57,10 @@ object MongoDB {
       for {
         config <- F.fromTry(Try{
                     rootConfig.as[MongoConfig]("mongoDB")
-                  })
+                  }).ensure(new MongoDBConfigurationException("mongoDB.hosts must be set in the conf"))(_.hosts.nonEmpty)
 
         auths  <- authOf(config, cryptO)
-
-        _ <- if (config.hosts.isEmpty)
-              F.raiseError(new MongoDBConfigurationException("mongoDB.hosts must be set in the conf"))
-             else F.unit
-
-        d <-  F.delay {
-                val d = MongoDriver(rootConfig.withFallback(ConfigFactory.load("default-reactive-mongo.conf")))
-                sh.onShutdown(d.close())
-                d
-              }
+        d <-  F.delay(MongoDriver(rootConfig.withFallback(ConfigFactory.load("default-reactive-mongo.conf"))))
 
       } yield {
         val connection = d.connection(
@@ -85,9 +76,15 @@ object MongoDB {
                                   retries = config.retries.getOrElse(FailoverStrategy.default.retries))
           )
         )
-        new MongoDB(config, connection, d)
+        val mongoDB = new MongoDB(config, connection, d)
+        sh.onShutdown(mongoDB.driver.close())
+        mongoDB
       }
     }
+
+  def resource[F[_]](rootConfig: Config, cryptO: Option[Crypt[F]] = None)
+                 (implicit F: Async[F]): Resource[F, MongoDB[F]] =
+    Resource.make(MongoDB(rootConfig, cryptO))(_.close)
 
   private[mongo] def authOf[F[_]](config: MongoConfig, cryptO: Option[Crypt[F]])
                           (implicit F: Async[F]) : F[Option[Authenticate]] =

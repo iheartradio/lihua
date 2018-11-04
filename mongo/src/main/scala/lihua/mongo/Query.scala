@@ -8,7 +8,7 @@ package mongo
 import play.api.libs.json.{Format, JsObject, Json, Writes}
 import reactivemongo.api.{QueryOpts, ReadPreference}
 
-
+import JsonFormats._
 case class Query (
   selector:       JsObject,
   hint:           Option[JsObject]       = None,
@@ -20,7 +20,7 @@ case class Query (
 object Query {
   val idFieldName = "_id"
 
-  def idSelector(id: ObjectId): JsObject = Json.obj(idFieldName -> id.value)
+  def idSelector(id: ObjectId): JsObject = Json.obj(idFieldName -> id)
 
   implicit def fromSelector(selector: JsObject): Query = Query(selector)
 
