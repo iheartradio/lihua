@@ -29,8 +29,8 @@ object DBError {
   case class ItemWriteErrorDetail(code: Int, msg: String) extends WriteErrorDetail
   case class WriteConcernErrorDetail(code: Int, msg: String) extends WriteErrorDetail
 
-  case class UpdatedCountErrorDetail(expectedCount: Int) extends DBError {
-    override def getMessage = "updated count is 0, expected " + expectedCount
+  case class UpdatedCountErrorDetail(expectedCount: Int, actual: Int) extends DBError {
+    override def getMessage = s"updated count is $actual, expected $expectedCount"
   }
 
 

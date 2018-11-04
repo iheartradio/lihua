@@ -85,24 +85,25 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
       }
   }
 
-  def insert(t: T): R[Entity[T]] = of {
+  def insert(t: T): R[Entity[T]] = {
     val entity = Entity(BSONObjectID.generate.stringify, t)
-    writeCollection.insert(entity).map(parseWriteResult(_).ensure(UpdatedCountErrorDetail(1))(_ == 1).as(entity))
+    of {
+      writeCollection.insert(entity)
+    }.ensureOr(UpdatedCountErrorDetail(1, _))(_ == 1).as(entity)
   }
 
   def remove(id: ObjectId): R[Unit] =
     removeAll(Query.idSelector(id)).ensure(NotFound)(_ > 0).void
 
   def upsert(entity: Entity[T]): R[Entity[T]] =
-    update(Query.idSelector(entity._id), entity, true)
+    update(Query.idSelector(entity._id), entity, true).as(entity)
 
   def update(entity: Entity[T]): R[Entity[T]] =
-    update(Query.idSelector(entity._id), entity, false)
+    update(Query.idSelector(entity._id), entity, false).as(entity)
 
-
-  def update(q: Query, entity: Entity[T], upsert: Boolean): R[Entity[T]] = of {
-    writeCollection.update(q.selector, entity, upsert = upsert)
-  }.as(entity)
+  def update(q: Query, entity: Entity[T], upsert: Boolean): R[Boolean] = of {
+    writeCollection.update(q.selector, entity, upsert = upsert, multi = false)
+  }.ensureOr(UpdatedCountErrorDetail(1, _))(_ <= 1).map(_ == 1)
 
   def removeAll(q: Query): R[Int] = of {
     writeCollection.remove(q.selector)

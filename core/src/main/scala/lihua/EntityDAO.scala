@@ -34,7 +34,14 @@ trait EntityDAO[F[_], T, Query] {
 
   def removeAll(query: Query): F[Int]
 
-  def update(query: Query, entity: Entity[T], upsert: Boolean): F[Entity[T]]
+  /**
+   * update the first entity query finds
+   * @param query search query
+   * @param entity to be updated to
+   * @param upsert whether to insert of nothing is found
+   * @return whether anything is updated
+   */
+  def update(query: Query, entity: Entity[T], upsert: Boolean): F[Boolean]
 }
 
 object EntityDAO {
@@ -67,7 +74,7 @@ object EntityDAO {
 
       def removeAll(query: B): F[Int] = ea.removeAll(f(query))
 
-      def update(query: B, entity: Entity[T], upsert: Boolean): F[Entity[T]] =
+      def update(query: B, entity: Entity[T], upsert: Boolean): F[Boolean] =
         ea.update(f(query), entity, upsert)
     }
   }
