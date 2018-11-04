@@ -12,13 +12,19 @@ val reactiveMongoVer = "0.13.0"
 lazy val lihua = project.in(file("."))
   .settings(commonSettings)
   .settings(noPublishSettings)
-  .aggregate(mongo, crypt)
+  .aggregate(mongo, crypt, core)
+
+lazy val core = project
+  .settings(moduleName := "lihua-core")
+  .settings(commonSettings)
+  .settings(taglessSettings)
 
 lazy val mongo = project
-  .settings(name := "mongo")
+  .dependsOn(core)
+  .aggregate(core)
   .settings(moduleName := "lihua-mongo")
   .settings(commonSettings)
-  .settings(mainecoonSettings)
+  .settings(taglessSettings)
   .settings(addLibs(vAll, "cats-core", "cats-effect"))
   .settings(addTestLibs(vAll, "scalatest"))
   .settings(
@@ -28,7 +34,6 @@ lazy val mongo = project
       "org.reactivemongo" %% "reactivemongo-iteratees" % reactiveMongoVer,
       "com.iheart" %% "ficus" % "1.4.3",
       "com.github.cb372" %% "scalacache-caffeine" % "0.22.0",
-
       "com.typesafe.play" %% "play-json" % "2.6.2",
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.9" % Test,
       "org.log4s" %% "log4s" % "1.3.4",
@@ -43,7 +48,7 @@ lazy val crypt = project
   .settings(name := "crypt")
   .settings(moduleName := "lihua-crypt")
   .settings(commonSettings)
-  .settings(mainecoonSettings)
+  .settings(taglessSettings)
   .settings(addLibs(vAll, "cats-core"))
   .settings(addTestLibs(vAll, "scalatest"))
   .settings(
@@ -51,12 +56,12 @@ lazy val crypt = project
       "io.github.jmcardon" %% "tsec-cipher-jca" % "0.0.1-M11"
     ))
 
-lazy val mainecoonSettings = Seq(
+lazy val taglessSettings = Seq(
   addCompilerPlugin(
     ("org.scalameta" % "paradise" % "3.0.0-M11").cross(CrossVersion.full)
   ),
   libraryDependencies ++= Seq(
-    "com.kailuowang" %% "mainecoon-macros" % "0.6.3"
+    "org.typelevel" %% "cats-tagless-macros" % "0.1.0"
   )
 )
 

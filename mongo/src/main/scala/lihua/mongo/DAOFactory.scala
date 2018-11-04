@@ -1,4 +1,5 @@
-package lihua.mongo
+package lihua
+package mongo
 
 import cats.effect.{Async, IO}
 import play.api.libs.json.Format
@@ -9,7 +10,7 @@ import reactivemongo.api.commands.CommandError
 import scala.concurrent.ExecutionContext
 
 trait DAOFactory[F[_], DAOF[_], A] {
-  def create(implicit mongoDB: MongoDB[F], ec: ExecutionContext): F[EntityDAO[DAOF, A]]
+  def create(implicit mongoDB: MongoDB[F], ec: ExecutionContext): F[EntityDAO[DAOF, A, Query]]
 }
 
 abstract class DAOFactoryWithEnsure[A :Format, DAOF[_], F[_]](
@@ -25,7 +26,7 @@ abstract class DAOFactoryWithEnsure[A :Format, DAOF[_], F[_]](
     })))
 
 
-  def create(implicit mongoDB: MongoDB[F], ec: ExecutionContext): F[EntityDAO[DAOF, A]] = {
+  def create(implicit mongoDB: MongoDB[F], ec: ExecutionContext): F[EntityDAO[DAOF, A, Query]] = {
     for {
       c <- mongoDB.collection(dbName, collectionName)
       _ <- ensureCollection(c)
@@ -34,7 +35,7 @@ abstract class DAOFactoryWithEnsure[A :Format, DAOF[_], F[_]](
     } yield dao
   }
 
-  def doCreate(c: JSONCollection)(implicit ec: ExecutionContext): F[EntityDAO[DAOF, A]]
+  def doCreate(c: JSONCollection)(implicit ec: ExecutionContext): F[EntityDAO[DAOF, A, Query]]
 }
 
 
@@ -42,19 +43,14 @@ abstract class DirectDAOFactory[A: Format, F[_]](dbName: String, collectionName:
                                                 (implicit F: Async[F])
   extends DAOFactoryWithEnsure[A, F, F](dbName, collectionName) {
 
-  def doCreate(c: JSONCollection)(implicit ec: ExecutionContext): F[EntityDAO[F, A]] =
-    F.delay(SyncEntityDAO.direct[F, A](new SyncEntityDAO(c)))
+  def doCreate(c: JSONCollection)(implicit ec: ExecutionContext): F[EntityDAO[F, A, Query]] =
+    F.delay(AsyncEntityDAO.direct[F, A](new AsyncEntityDAO(c)))
 }
 
-abstract class IODAOFactory[A :Format, DAOF[_]](dbName: String, collectionName: String)
-  extends DAOFactoryWithEnsure[A, DAOF, IO](dbName, collectionName)
+abstract class EitherTDAOFactory[A: Format, F[_]](dbName: String, collectionName: String)
+                                                (implicit F: Async[F])
+  extends DAOFactoryWithEnsure[A, AsyncEntityDAO.Result[F, ?], F](dbName, collectionName) {
 
-
-abstract class IODirectDAOFactory[A: Format](dbName: String, collectionName: String)
-                              extends DirectDAOFactory[A, IO](dbName, collectionName)
-
-abstract class IOEitherTDAOFactory[A: Format](dbName: String, collectionName: String)
-                              extends IODAOFactory[A, SyncEntityDAO.Result[IO, ?]](dbName, collectionName) {
-  def doCreate(c: JSONCollection)(implicit ec: ExecutionContext): IO[IOEntityDAO[A]] =
-    IO(new IOEntityDAO(c))
+  def doCreate(c: JSONCollection)(implicit ec: ExecutionContext): F[EntityDAO[AsyncEntityDAO.Result[F, ?], A, Query]] =
+    F.pure(new AsyncEntityDAO[A, F](c))
 }

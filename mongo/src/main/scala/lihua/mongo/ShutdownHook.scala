@@ -2,7 +2,8 @@
 * Copyright [2017] [iHeartMedia Inc]
 * All rights reserved
 */
-package lihua.mongo
+package lihua
+package mongo
 
 trait ShutdownHook {
   def onShutdown[T](code: ⇒ T): Unit
