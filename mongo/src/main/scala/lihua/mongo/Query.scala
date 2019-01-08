@@ -14,7 +14,8 @@ case class Query (
   hint:           Option[JsObject]       = None,
   sort:           Option[JsObject]       = None,
   opts:           Option[QueryOpts]      = None,
-  readPreference: Option[ReadPreference] = None
+  readPreference: Option[ReadPreference] = None,
+  projection:     Option[JsObject]       = None
 )
 
 object Query {

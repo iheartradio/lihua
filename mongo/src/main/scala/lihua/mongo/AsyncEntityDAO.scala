@@ -7,7 +7,7 @@ package mongo
 
 import cats.data.{EitherT, NonEmptyList}
 import lihua.mongo.DBError._
-import play.api.libs.json.{Format}
+import play.api.libs.json.{Format, JsObject}
 import reactivemongo.play.json.collection.JSONCollection
 import reactivemongo.play.json._
 import cats.implicits._
@@ -42,7 +42,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
   lazy val writeCollection = collection.withReadPreference(ReadPreference.primary) //due to a bug in ReactiveMongo
 
   def get(id: EntityId): R[Entity[T]] = of(
-    collection.find(Query.idSelector(id)).one[Entity[T]]
+    collection.find(Query.idSelector(id), none[JsObject]).one[Entity[T]]
   )
 
   def find(q: Query): R[Vector[Entity[T]]] = of {
@@ -69,7 +69,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
   private def readPref(q: Query) = q.readPreference.getOrElse(collection.readPreference)
 
   private def builder(q: Query) = {
-    var builder = collection.find(q.selector)
+    var builder = collection.find(q.selector, q.projection)
     builder = q.hint.fold(builder)(builder.hint)
     builder = q.opts.fold(builder)(builder.options)
     builder = q.sort.fold(builder)(builder.sort)
@@ -106,7 +106,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
   }.ensureOr(UpdatedCountErrorDetail(1, _))(_ <= 1).map(_ == 1)
 
   def removeAll(q: Query): R[Int] = of {
-    writeCollection.remove(q.selector)
+    writeCollection.delete().one(q.selector)
   }
 
   private val errorHandler: ErrorHandler[Vector[Entity[T]]] = Cursor.FailOnError()

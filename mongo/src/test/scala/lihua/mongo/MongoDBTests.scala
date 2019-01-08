@@ -4,8 +4,9 @@ package mongo
 import cats.effect.IO
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{FunSuite, Matchers}
+import reactivemongo.api.MongoConnectionOptions.Credential
 import reactivemongo.api.ReadPreference
-import reactivemongo.core.nodeset.Authenticate
+
 import concurrent.duration._
 class MongoDBTests extends FunSuite with Matchers {
 
@@ -24,13 +25,15 @@ class MongoDBTests extends FunSuite with Matchers {
         |  initial-delay: 3s
         |  retries: 14
         |  read-preference: secondary
-        |  credential: {
-        |    username: alf
-        |    password: "L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg=="
-        |  }
         |  dbs: {
         |    school: {
         |      name: schoolDB
+        |
+        |      credential: {
+        |        username: alf
+        |        password: "L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg=="
+        |      }
+        |
         |      collections: {
         |        student: {
         |          name: studentCollection
@@ -49,7 +52,7 @@ class MongoDBTests extends FunSuite with Matchers {
     config.retries shouldBe Some(14)
     config.initialDelay shouldBe Some(3.seconds)
     config.readPreference shouldBe Some(ReadPreference.secondary)
-    MongoDB.authOf(config, Some(mockCrypt)).unsafeRunSync().head shouldBe Authenticate("admin", "alf", "L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg==decrypted")
+    MongoDB.credOf(config, Some(mockCrypt)).unsafeRunSync() shouldBe Map("schoolDB" -> Credential("alf", Some("L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg==decrypted")))
 
   }
 

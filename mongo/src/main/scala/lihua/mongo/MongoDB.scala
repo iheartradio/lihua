@@ -12,7 +12,6 @@ import cats.implicits._
 import net.ceedubs.ficus.readers.namemappers.implicits.hyphenCase
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import net.ceedubs.ficus.readers.ValueReader
-import reactivemongo.core.nodeset.Authenticate
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
@@ -59,21 +58,21 @@ object MongoDB {
                     rootConfig.as[MongoConfig]("mongoDB")
                   }).ensure(new MongoDBConfigurationException("mongoDB.hosts must be set in the conf"))(_.hosts.nonEmpty)
 
-        auths  <- authOf(config, cryptO)
+        creds  <- credOf(config, cryptO)
         d <-  F.delay(MongoDriver(rootConfig.withFallback(ConfigFactory.load("default-reactive-mongo.conf"))))
 
       } yield {
         val connection = d.connection(
           nodes = config.hosts,
-          authentications = auths.toSeq,
           options = MongoConnectionOptions(
             sslEnabled = config.sslEnabled,
             authenticationDatabase = config.authSource,
-            authMode = config.authMode,
+            authenticationMechanism = config.authMode,
             readPreference = config.readPreference.getOrElse(ReadPreference.primaryPreferred),
             failoverStrategy =  FailoverStrategy.default.copy(
                                   initialDelay = config.initialDelay.getOrElse(FailoverStrategy.default.initialDelay),
-                                  retries = config.retries.getOrElse(FailoverStrategy.default.retries))
+                                  retries = config.retries.getOrElse(FailoverStrategy.default.retries)),
+            credentials = creds
           )
         )
         val mongoDB = new MongoDB(config, connection, d)
@@ -86,11 +85,15 @@ object MongoDB {
                  (implicit F: Async[F]): Resource[F, MongoDB[F]] =
     Resource.make(MongoDB(rootConfig, cryptO))(_.close)
 
-  private[mongo] def authOf[F[_]](config: MongoConfig, cryptO: Option[Crypt[F]])
-                          (implicit F: Async[F]) : F[Option[Authenticate]] =
-    config.credential.traverse { c =>
-      cryptO.fold(F.pure(c.password))(_.decrypt(c.password)).map(Authenticate(config.authSource.getOrElse("admin"), c.username, _))
-    }
+  private[mongo] def credOf[F[_]](config: MongoConfig, cryptO: Option[Crypt[F]])
+                                 (implicit F: Async[F]) : F[Map[String, MongoConnectionOptions.Credential]] =
+    config.dbs.toList.traverse { case (k, dbc) =>
+      dbc.credential.traverse { c =>
+        cryptO.fold(F.pure(c.password))(_.decrypt(c.password))
+          .map(p => (dbc.name.getOrElse(k), MongoConnectionOptions.Credential(c.username, Some(p))))
+      }
+    }.map(_.flatten.toMap)
+
 
   class MongoDBConfigurationException(msg: String) extends Exception(msg)
 
@@ -98,7 +101,7 @@ object MongoDB {
     hosts: List[String] = Nil,
     sslEnabled: Boolean = false,
     authSource: Option[String] = None,
-    credential: Option[Credential] = None,
+
     authMode: AuthenticationMode = ScramSha1Authentication,
     dbs: Map[String, DBConfig] = Map(),
     readPreference: Option[ReadPreference],
@@ -108,6 +111,7 @@ object MongoDB {
 
   case class DBConfig(
     name: Option[String],
+    credential: Option[Credential],
     collections: Map[String, CollectionConfig]
   )
 
