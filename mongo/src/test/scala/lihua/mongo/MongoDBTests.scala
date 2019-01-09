@@ -52,7 +52,10 @@ class MongoDBTests extends FunSuite with Matchers {
     config.retries shouldBe Some(14)
     config.initialDelay shouldBe Some(3.seconds)
     config.readPreference shouldBe Some(ReadPreference.secondary)
-    MongoDB.credOf(config, Some(mockCrypt)).unsafeRunSync() shouldBe Map("schoolDB" -> Credential("alf", Some("L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg==decrypted")))
+    MongoDB.credOf(config, Some(mockCrypt)).unsafeRunSync() shouldBe Map(
+      "schoolDB" -> Credential("alf", Some("L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg==decrypted")),
+      "admin" -> Credential("alf", Some("L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg==decrypted"))
+    )
 
   }
 

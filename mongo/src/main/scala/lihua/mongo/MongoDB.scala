@@ -62,19 +62,18 @@ object MongoDB {
         d <-  F.delay(MongoDriver(rootConfig.withFallback(ConfigFactory.load("default-reactive-mongo.conf"))))
 
       } yield {
-        val connection = d.connection(
-          nodes = config.hosts,
-          options = MongoConnectionOptions(
-            sslEnabled = config.sslEnabled,
-            authenticationDatabase = config.authSource,
-            authenticationMechanism = config.authMode,
-            readPreference = config.readPreference.getOrElse(ReadPreference.primaryPreferred),
-            failoverStrategy =  FailoverStrategy.default.copy(
-                                  initialDelay = config.initialDelay.getOrElse(FailoverStrategy.default.initialDelay),
-                                  retries = config.retries.getOrElse(FailoverStrategy.default.retries)),
-            credentials = creds
-          )
+        val options = MongoConnectionOptions(
+          sslEnabled = config.sslEnabled,
+          authenticationDatabase = config.authSource,
+          sslAllowsInvalidCert = true,
+          authenticationMechanism = config.authMode,
+          readPreference = config.readPreference.getOrElse(ReadPreference.primaryPreferred),
+          failoverStrategy =  FailoverStrategy.default.copy(
+            initialDelay = config.initialDelay.getOrElse(FailoverStrategy.default.initialDelay),
+            retries = config.retries.getOrElse(FailoverStrategy.default.retries)),
+          credentials = creds
         )
+        val connection = d.connection(config.hosts, options)
         val mongoDB = new MongoDB(config, connection, d)
         sh.onShutdown(mongoDB.driver.close())
         mongoDB
@@ -92,7 +91,14 @@ object MongoDB {
         cryptO.fold(F.pure(c.password))(_.decrypt(c.password))
           .map(p => (dbc.name.getOrElse(k), MongoConnectionOptions.Credential(c.username, Some(p))))
       }
-    }.map(_.flatten.toMap)
+    }.map { l =>
+      val map = l.flatten.toMap
+      //if authSource db is missing a credential, use the top one by default.
+      (config.authSource, map.values.headOption)
+        .tupled
+        .fold(map)(Map(_) ++ map)
+
+    }
 
 
   class MongoDBConfigurationException(msg: String) extends Exception(msg)
@@ -101,7 +107,6 @@ object MongoDB {
     hosts: List[String] = Nil,
     sslEnabled: Boolean = false,
     authSource: Option[String] = None,
-
     authMode: AuthenticationMode = ScramSha1Authentication,
     dbs: Map[String, DBConfig] = Map(),
     readPreference: Option[ReadPreference],
@@ -112,7 +117,7 @@ object MongoDB {
   case class DBConfig(
     name: Option[String],
     credential: Option[Credential],
-    collections: Map[String, CollectionConfig]
+    collections: Map[String, CollectionConfig] = Map()
   )
 
   case class Credential(username: String, password: String)
