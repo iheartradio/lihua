@@ -88,7 +88,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
   def insert(t: T): R[Entity[T]] = {
     val entity = Entity(BSONObjectID.generate.stringify, t)
     of {
-      writeCollection.insert(entity)
+      writeCollection.insert(ordered = false).one(entity)
     }.ensureOr(UpdatedCountErrorDetail(1, _))(_ == 1).as(entity)
   }
 
@@ -102,7 +102,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
     update(Query.idSelector(entity._id), entity, false).as(entity)
 
   def update(q: Query, entity: Entity[T], upsert: Boolean): R[Boolean] = of {
-    writeCollection.update(q.selector, entity, upsert = upsert, multi = false)
+    writeCollection.update(ordered = false).one(q.selector, entity, upsert = upsert, multi = false)
   }.ensureOr(UpdatedCountErrorDetail(1, _))(_ <= 1).map(_ == 1)
 
   def removeAll(q: Query): R[Int] = of {
