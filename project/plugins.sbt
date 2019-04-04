@@ -1,1 +1,1 @@
-addSbtPlugin("org.typelevel" % "sbt-catalysts" % "0.11.1")
+addSbtPlugin("org.typelevel" % "sbt-catalysts" % "0.12")

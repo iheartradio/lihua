@@ -5,12 +5,12 @@ addCommandAlias("gitSnapshots", ";set version in ThisBuild := git.gitDescribedVe
 val apache2 = "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.html")
 val gh = GitHubSettings(org = "iheartradio", proj = "lihua", publishOrg = "com.iheart", license = apache2)
 
-val reactiveMongoVer = "0.16.1"
+val reactiveMongoVer = "0.16.5"
 
 lazy val libs =
   org.typelevel.libraries
     .addJVM("reactivemongo", version = reactiveMongoVer, org = "org.reactivemongo", "reactivemongo", "reactivemongo-iteratees" )
-    .addJVM("reactivemongo-play-json", version = "0.16.1" + "-play26", org = "org.reactivemongo")
+    .addJVM("reactivemongo-play-json", version = reactiveMongoVer + "-play26", org = "org.reactivemongo")
 
 lazy val lihua = project.in(file("."))
   .settings(commonSettings)
@@ -34,8 +34,8 @@ lazy val mongo = project
     libs.dependencies("cats-effect", "reactivemongo", "reactivemongo-iteratees", "reactivemongo-play-json"),
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.3",
-      "com.github.cb372" %% "scalacache-caffeine" % "0.22.0",
-      "com.typesafe.play" %% "play-json" % "2.6.2",
+      "com.github.cb372" %% "scalacache-caffeine" % "0.27.0",
+      "com.typesafe.play" %% "play-json" % "2.6.13",
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.19" % Test,
       "org.apache.logging.log4j" % "log4j-core" % "2.11.1" % Test,
       "org.log4s" %% "log4s" % "1.6.1",
