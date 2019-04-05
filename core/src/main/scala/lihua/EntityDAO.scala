@@ -1,7 +1,7 @@
 package lihua
 
 import cats.Contravariant
-import cats.tagless.{autoFunctorK, finalAlg}
+import cats.tagless.FunctorK
 
 import scala.concurrent.duration.Duration
 /**
@@ -9,7 +9,6 @@ import scala.concurrent.duration.Duration
  * @tparam F effect Monad
  * @tparam T type of the domain model
  */
-@autoFunctorK(autoDerivation = true) @finalAlg
 trait EntityDAO[F[_], T, Query] {
 
   def get(id: EntityId): F[Entity[T]]
@@ -45,6 +44,8 @@ trait EntityDAO[F[_], T, Query] {
 }
 
 object EntityDAO {
+  implicit def functorKInstance[T, Q]: FunctorK[EntityDAO[?[_], T, Q]] = cats.tagless.Derive.functorK[EntityDAO[?[_], T, Q]]
+
   implicit def contravriantEntityDAO[F[_], T]: Contravariant[EntityDAO[F, T, ?]] = new Contravariant[EntityDAO[F, T, ?]] {
     def contramap[A, B](ea: EntityDAO[F, T, A])(f: B => A): EntityDAO[F, T, B] = new EntityDAO[F, T, B] {
       def get(id: EntityId): F[Entity[T]] = ea.get(id)

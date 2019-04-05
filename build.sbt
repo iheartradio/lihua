@@ -57,12 +57,9 @@ lazy val crypt = project
       "io.github.jmcardon" %% "tsec-cipher-jca" % "0.0.1-M11"
     ))
 
-lazy val taglessSettings = Seq(
-  addCompilerPlugin(
-    ("org.scalameta" % "paradise" % "3.0.0-M11").cross(CrossVersion.full)
-  ),
+lazy val taglessSettings = paradiseSettings(libs) ++ Seq(
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-tagless-macros" % "0.1.0"
+    "org.typelevel" %% "cats-tagless-macros" % "0.5"
   )
 )
 
