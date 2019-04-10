@@ -30,10 +30,11 @@ import scalacache.caffeine._
 
 import scala.util.control.NoStackTrace
 import JsonFormats._
+import lihua.EntityDAO.EntityDAOMonad
 
 
 class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit ex: EC)
-  extends EntityDAO[AsyncEntityDAO.Result[F, ?], T, Query] {
+  extends EntityDAOMonad[AsyncEntityDAO.Result[F, ?], T, Query] {
   type R[A] = AsyncEntityDAO.Result[F, A]
   import AsyncEntityDAO.Result._
 

@@ -1,6 +1,6 @@
 package lihua
 
-import cats.Contravariant
+import cats.{Contravariant, Monad}
 import cats.tagless.FunctorK
 
 import scala.concurrent.duration.Duration
@@ -41,6 +41,8 @@ trait EntityDAO[F[_], T, Query] {
    * @return whether anything is updated
    */
   def update(query: Query, entity: Entity[T], upsert: Boolean): F[Boolean]
+
+  def upsert(query: Query, t: T): F[Entity[T]]
 }
 
 object EntityDAO {
@@ -77,6 +79,23 @@ object EntityDAO {
 
       def update(query: B, entity: Entity[T], upsert: Boolean): F[Boolean] =
         ea.update(f(query), entity, upsert)
+
+      def upsert(query: B, t: T): F[Entity[T]] = ea.upsert(f(query), t)
     }
+  }
+
+  /**
+   * Provides more default implemenation thanks to F being a Monad
+   * @param ev$1
+   * @tparam F effect Monad
+   * @tparam T type of the domain model
+   * @tparam Query
+   */
+  abstract class EntityDAOMonad[F[_]: Monad, T, Query] extends EntityDAO[F, T, Query] {
+    import cats.implicits._
+    def upsert(query: Query, t: T): F[Entity[T]] =
+      findOneOption(query).flatMap(
+        _.fold(insert(t))(e => update(e.copy(data = t)))
+      )
   }
 }
