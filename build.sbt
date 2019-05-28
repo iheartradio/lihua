@@ -17,7 +17,8 @@ lazy val libs =
 
 lazy val lihua = project.in(file("."))
   .settings(commonSettings)
-  .settings(noPublishSettings)
+  .settings(noPublishSettings,
+            crossScalaVersions := Nil)
   .aggregate(mongo, crypt, core)
 
 lazy val core = project
