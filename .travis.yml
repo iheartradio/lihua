@@ -3,7 +3,7 @@ sudo: required
 dist: trusty
 
 scala:
-  - 2.12.4
+  - 2.12.8
   - 2.11.12
 
 jdk:
@@ -19,7 +19,7 @@ cache:
     - $HOME/.ivy2/cache
 
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION clean test;
+  - sbt ";++$TRAVIS_SCALA_VERSION clean;++$TRAVIS_SCALA_VERSION test"
 
 before_cache:
   - du -h -d 1 $HOME/.ivy2/cache

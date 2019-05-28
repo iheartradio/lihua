@@ -2,6 +2,8 @@ import org.typelevel.Dependencies._
 
 addCommandAlias("gitSnapshots", ";set version in ThisBuild := git.gitDescribedVersion.value.get + \"-SNAPSHOT\"")
 
+addCommandAlias("validate", ";clean;test")
+
 val apache2 = "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.html")
 val gh = GitHubSettings(org = "iheartradio", proj = "lihua", publishOrg = "com.iheart", license = apache2)
 
@@ -61,6 +63,7 @@ lazy val crypt = project
   .settings(commonSettings)
   .settings(taglessSettings)
   .settings(
+    crossScalaVersions := Seq(scalaVersion.value),
     libs.dependencies("cats-core"),
     libs.testDependencies("scalatest"),
     libraryDependencies ++= Seq(
