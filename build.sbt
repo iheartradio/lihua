@@ -32,6 +32,7 @@ lazy val mongo = project
   .settings(commonSettings)
   .settings(taglessSettings)
   .settings(
+    crossScalaVersions := Seq(scalaVersion.value),
     libs.testDependencies("scalatest"),
     libs.dependency("simulacrum", Some("provided")),
     libs.dependencies(
