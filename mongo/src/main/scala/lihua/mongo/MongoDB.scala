@@ -62,7 +62,7 @@ object MongoDB {
         d <-  F.delay(MongoDriver(rootConfig.withFallback(ConfigFactory.load("default-reactive-mongo.conf"))))
 
       } yield {
-        val options = MongoConnectionOptions(
+        val options = MongoConnectionOptions.default.copy(
           sslEnabled = config.sslEnabled,
           authenticationDatabase = config.authSource,
           sslAllowsInvalidCert = true,

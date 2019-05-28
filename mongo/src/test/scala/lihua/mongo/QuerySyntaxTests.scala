@@ -2,12 +2,13 @@ package lihua
 package mongo
 
 import cats.effect.IO
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.Matchers
+import org.scalatest.funsuite.AnyFunSuiteLike
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class QuerySyntaxTests extends FunSuite with Matchers {
+class QuerySyntaxTests extends AnyFunSuiteLike with Matchers {
   object testDAO extends AsyncEntityDAO[TestEntity, IO](null)
 
   test("tuples") {
