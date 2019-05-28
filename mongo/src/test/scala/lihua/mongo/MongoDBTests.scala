@@ -3,12 +3,14 @@ package mongo
 
 import cats.effect.IO
 import com.typesafe.config.ConfigFactory
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.Matchers
+import org.scalatest.funsuite.AnyFunSuiteLike
+
 import reactivemongo.api.MongoConnectionOptions.Credential
 import reactivemongo.api.ReadPreference
 
 import concurrent.duration._
-class MongoDBTests extends FunSuite with Matchers {
+class MongoDBTests extends AnyFunSuiteLike with Matchers {
 
   object mockCrypt extends Crypt[IO] {
     override def encrypt(value: String): IO[String] = ???

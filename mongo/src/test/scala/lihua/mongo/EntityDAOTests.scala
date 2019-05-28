@@ -6,14 +6,15 @@ package lihua
 package mongo
 import cats.effect.IO
 import com.typesafe.config.ConfigFactory
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.Matchers
+import org.scalatest.funsuite.AnyFunSuiteLike
 import play.api.libs.json.{Format, Json}
 import reactivemongo.play.json.collection.JSONCollection
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
 
-class EntityDAOTests extends FunSuite with Matchers {
+class EntityDAOTests extends AnyFunSuiteLike with Matchers {
   test("no side effect before performing unsafe IO with task") {
     object testDAO extends AsyncEntityDAO[TestEntity, IO](null)
 
