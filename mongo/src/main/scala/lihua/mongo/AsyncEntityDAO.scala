@@ -32,13 +32,12 @@ import scala.util.control.NoStackTrace
 import JsonFormats._
 import lihua.EntityDAO.EntityDAOMonad
 
+import scalacache.CatsEffect.modes._
 
 class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit ex: EC)
   extends EntityDAOMonad[AsyncEntityDAO.Result[F, ?], T, Query] {
   type R[A] = AsyncEntityDAO.Result[F, A]
   import AsyncEntityDAO.Result._
-
-  implicit val scalaCache: Cache[Vector[Entity[T]]] = CaffeineCache[Vector[Entity[T]]]
 
   lazy val writeCollection = collection.withReadPreference(ReadPreference.primary) //due to a bug in ReactiveMongo
 
@@ -58,14 +57,9 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
     builder(q).one[Entity[T]](readPref(q))
   }
 
-  def invalidateCache(q: Query): R[Unit] =
-    of(scalacache.remove(q)).void
-
-  private def internalFind(q: Query): Future[Vector[Entity[T]]] = {
-
+  private def internalFind(q: Query): Future[Vector[Entity[T]]] =
     builder(q).cursor[Entity[T]](readPref(q)).
       collect[Vector](-1, errorHandler)
-  }
 
   private def readPref(q: Query) = q.readPreference.getOrElse(collection.readPreference)
 
@@ -75,15 +69,6 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
     builder = q.opts.fold(builder)(builder.options)
     builder = q.sort.fold(builder)(builder.sort)
     builder
-  }
-
-  def findCached(query: Query, ttl: Duration): R[Vector[Entity[T]]] = of {
-    if (ttl.length == 0L)
-      internalFind(query)
-    else
-      cachingF(query)(Some(ttl)) {
-        internalFind(query)
-      }
   }
 
   def insert(t: T): R[Entity[T]] = {
@@ -118,6 +103,25 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
       case e: Throwable => DBException(e, collection.name).asLeft[A]
     }))))
 }
+
+class AsyncEntityDAOWithCache[T: Format, F[_]: Async, Q](val dao: EntityDAO[F, T, Q]) extends EntityDAOWithCache[F, T, Q] {
+
+  implicit val scalaCache: Cache[Vector[Entity[T]]] = CaffeineCache[Vector[Entity[T]]]
+
+  def invalidateCache(q: Q): F[Unit] =
+    scalacache.remove(q).void
+
+  def findCached(query: Q, ttl: Duration): F[Vector[Entity[T]]] =
+    if (ttl.length == 0L)
+      dao.find(query)
+    else
+      cachingF(query)(Some(ttl)) {
+        dao.find(query)
+      }
+
+}
+
+
 
 object AsyncEntityDAO {
   type Result[F[_], T] = EitherT[F, DBError, T]

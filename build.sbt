@@ -14,7 +14,7 @@ lazy val libs =
     .addJVM("reactivemongo", version = reactiveMongoVer, org = "org.reactivemongo", "reactivemongo", "reactivemongo-iteratees" )
     .addJVM("reactivemongo-play-json", version = reactiveMongoVer + "-play27", org = "org.reactivemongo")
     .addJava("caffeine", version = "2.7.0", org = "com.github.ben-manes.caffeine")
-    .addJVM("scalacache-caffeine", version = "0.27.0", org = "com.github.cb372")
+    .addJVM("scalacache", version = "0.27.0", org = "com.github.cb372", "scalacache-cats-effect", "scalacache-caffeine")
     .addJVM("play-json", version = "2.7.3", org = "com.typesafe.play")
 
 lazy val lihua = project.in(file("."))
@@ -45,7 +45,8 @@ lazy val mongo = project
       "reactivemongo-play-json",
       "play-json",
       "scalacache-caffeine",
-      "caffeine"),
+      "scalacache-cats-effect",
+      "caffeine"), 
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.3",
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.19" % Test,
@@ -72,7 +73,7 @@ lazy val crypt = project
 
 lazy val taglessSettings = paradiseSettings(libs) ++ Seq(
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-tagless-macros" % "0.5"
+    "org.typelevel" %% "cats-tagless-macros" % "0.9"
   )
 )
 
@@ -80,6 +81,7 @@ lazy val buildSettings = sharedBuildSettings(gh, libs)
 
 lazy val commonSettings = buildSettings ++ publishSettings ++ unidocCommonSettings ++ scoverageSettings ++ sharedCommonSettings ++ scalacAllSettings ++ Seq(
   parallelExecution in Test := false,
+  resolvers +="Sonatype OSS" at "https://oss.sonatype.org/service/local/repositories/releases/content/",
   sources in (Compile, doc) :=  Nil, //todo: somehow sbt doc hang, disable it for now so that I can release.
   crossScalaVersions := Seq(libs.vers("scalac_2.11"), scalaVersion.value),
   developers := List(Developer("@kailuowang", "Kailuo Wang", "kailuo.wang@gmail.com", new URL("http://kailuowang.com")))

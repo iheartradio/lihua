@@ -1,7 +1,7 @@
 package lihua
 
-import cats.{Contravariant, Monad}
-import cats.tagless.FunctorK
+import cats.Monad
+import cats.tagless._
 
 import scala.concurrent.duration.Duration
 /**
@@ -9,6 +9,8 @@ import scala.concurrent.duration.Duration
  * @tparam F effect Monad
  * @tparam T type of the domain model
  */
+@autoFunctorK
+@autoContravariant
 trait EntityDAO[F[_], T, Query] {
 
   def get(id: EntityId): F[Entity[T]]
@@ -19,15 +21,11 @@ trait EntityDAO[F[_], T, Query] {
 
   def upsert(entity: Entity[T]): F[Entity[T]]
 
-  def invalidateCache(query: Query): F[Unit]
-
   def find(query: Query): F[Vector[Entity[T]]]
 
   def findOne(query: Query): F[Entity[T]]
 
   def findOneOption(query: Query): F[Option[Entity[T]]]
-
-  def findCached(query: Query, ttl: Duration): F[Vector[Entity[T]]]
 
   def remove(id: EntityId): F[Unit]
 
@@ -45,48 +43,18 @@ trait EntityDAO[F[_], T, Query] {
   def upsert(query: Query, t: T): F[Entity[T]]
 }
 
+@autoFunctorK
+@autoContravariant
+trait EntityDAOWithCache[F[_], T, Query] {
+  def dao: EntityDAO[F, T, Query]
+  def invalidateCache(query: Query): F[Unit]
+  def findCached(query: Query, ttl: Duration): F[Vector[Entity[T]]]
+}
+
 object EntityDAO {
-  implicit def functorKInstance[T, Q]: FunctorK[EntityDAO[?[_], T, Q]] = cats.tagless.Derive.functorK[EntityDAO[?[_], T, Q]]
-
-  implicit def contravriantEntityDAO[F[_], T]: Contravariant[EntityDAO[F, T, ?]] = new Contravariant[EntityDAO[F, T, ?]] {
-    def contramap[A, B](ea: EntityDAO[F, T, A])(f: B => A): EntityDAO[F, T, B] = new EntityDAO[F, T, B] {
-      def get(id: EntityId): F[Entity[T]] = ea.get(id)
-
-      def insert(t: T): F[Entity[T]] = ea.insert(t)
-
-      def update(entity: Entity[T]): F[Entity[T]] = ea.update(entity)
-
-      def upsert(entity: Entity[T]): F[Entity[T]] = ea.upsert(entity)
-
-      def invalidateCache(query: B): F[Unit] =
-        ea.invalidateCache(f(query))
-
-      def find(query: B): F[Vector[Entity[T]]] =
-        ea.find(f(query))
-
-      def findOne(query: B): F[Entity[T]] =
-        ea.findOne(f(query))
-
-      def findOneOption(query: B): F[Option[Entity[T]]] =
-        ea.findOneOption(f(query))
-
-      def findCached(query: B, ttl: Duration): F[Vector[Entity[T]]] =
-        ea.findCached(f(query), ttl)
-
-      def remove(id: EntityId): F[Unit] = ea.remove(id)
-
-      def removeAll(query: B): F[Int] = ea.removeAll(f(query))
-
-      def update(query: B, entity: Entity[T], upsert: Boolean): F[Boolean] =
-        ea.update(f(query), entity, upsert)
-
-      def upsert(query: B, t: T): F[Entity[T]] = ea.upsert(f(query), t)
-    }
-  }
 
   /**
-   * Provides more default implemenation thanks to F being a Monad
-   * @param ev$1
+   * Provides more default implementation thanks to F being a Monad
    * @tparam F effect Monad
    * @tparam T type of the domain model
    * @tparam Query
