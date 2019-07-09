@@ -43,10 +43,7 @@ lazy val mongo = project
       "reactivemongo",
       "reactivemongo-iteratees",
       "reactivemongo-play-json",
-      "play-json",
-      "scalacache-caffeine",
-      "scalacache-cats-effect",
-      "caffeine"), 
+      "play-json"), 
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.3",
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.19" % Test,
@@ -56,6 +53,25 @@ lazy val mongo = project
     )
   )
 
+lazy val cache =  project
+  .dependsOn(core)
+  .aggregate(core)
+  .settings(moduleName := "lihua-cache")
+  .settings(commonSettings)
+  .settings(taglessSettings)
+  .settings(
+    crossScalaVersions := Seq(scalaVersion.value),
+    libs.testDependencies("scalatest"),
+    libs.dependencies(
+      "cats-effect",
+      "scalacache-caffeine",
+      "scalacache-cats-effect",
+      "caffeine"),
+    libraryDependencies ++= Seq(
+      "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
+    )
+  )
+  
 lazy val crypt = project
   .dependsOn(mongo)
   .aggregate(mongo)

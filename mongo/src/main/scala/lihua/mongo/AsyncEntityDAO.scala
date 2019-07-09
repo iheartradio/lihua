@@ -22,17 +22,11 @@ import reactivemongo.api.Cursor.ErrorHandler
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 
-import scala.concurrent.duration.Duration
-import scalacache.Cache
-import scalacache.cachingF
-import scalacache.modes.scalaFuture._
-import scalacache.caffeine._
 
 import scala.util.control.NoStackTrace
 import JsonFormats._
 import lihua.EntityDAO.EntityDAOMonad
 
-import scalacache.CatsEffect.modes._
 
 class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit ex: EC)
   extends EntityDAOMonad[AsyncEntityDAO.Result[F, ?], T, Query] {
@@ -102,23 +96,6 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
       case l: reactivemongo.api.commands.LastError => DBLastError(l.message).asLeft[A]
       case e: Throwable => DBException(e, collection.name).asLeft[A]
     }))))
-}
-
-class AsyncEntityDAOWithCache[T: Format, F[_]: Async, Q](val dao: EntityDAO[F, T, Q]) extends EntityDAOWithCache[F, T, Q] {
-
-  implicit val scalaCache: Cache[Vector[Entity[T]]] = CaffeineCache[Vector[Entity[T]]]
-
-  def invalidateCache(q: Q): F[Unit] =
-    scalacache.remove(q).void
-
-  def findCached(query: Q, ttl: Duration): F[Vector[Entity[T]]] =
-    if (ttl.length == 0L)
-      dao.find(query)
-    else
-      cachingF(query)(Some(ttl)) {
-        dao.find(query)
-      }
-
 }
 
 
