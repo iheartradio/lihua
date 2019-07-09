@@ -1,5 +1,3 @@
-import org.typelevel.Dependencies._
-
 addCommandAlias("gitSnapshots", ";set version in ThisBuild := git.gitDescribedVersion.value.get + \"-SNAPSHOT\"")
 
 addCommandAlias("validate", ";clean;test")
@@ -16,12 +14,13 @@ lazy val libs =
     .addJava("caffeine", version = "2.7.0", org = "com.github.ben-manes.caffeine")
     .addJVM("scalacache", version = "0.27.0", org = "com.github.cb372", "scalacache-cats-effect", "scalacache-caffeine")
     .addJVM("play-json", version = "2.7.3", org = "com.typesafe.play")
+    .addJVM("scanamo", version = "1.0.0-M10", org = "org.scanamo", "scanamo", "scanamo-cats-effect", "scanamo-testkit")
 
 lazy val lihua = project.in(file("."))
   .settings(commonSettings)
   .settings(noPublishSettings,
             crossScalaVersions := Nil)
-  .aggregate(mongo, crypt, core)
+  .aggregate(mongo, crypt, core, dynamo)
 
 lazy val core = project
   .settings(moduleName := "lihua-core")
@@ -43,7 +42,7 @@ lazy val mongo = project
       "reactivemongo",
       "reactivemongo-iteratees",
       "reactivemongo-play-json",
-      "play-json"), 
+      "play-json"),
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.3",
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.19" % Test,
@@ -71,7 +70,19 @@ lazy val cache =  project
       "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
     )
   )
-  
+
+lazy val dynamo =  project
+  .dependsOn(core)
+  .aggregate(core)
+  .settings(moduleName := "lihua-dynamo")
+  .settings(commonSettings)
+  .settings(taglessSettings)
+  .settings(
+    crossScalaVersions := Seq(scalaVersion.value),
+    libs.testDependencies("scalatest", "scanamo-testkit"),
+    libs.dependencies("scanamo-cats-effect")
+  )
+
 lazy val crypt = project
   .dependsOn(mongo)
   .aggregate(mongo)
@@ -110,4 +121,3 @@ lazy val commonJvmSettings = Seq()
 lazy val publishSettings = sharedPublishSettings(gh) ++ credentialSettings ++ sharedReleaseProcess
 
 lazy val scoverageSettings = sharedScoverageSettings(60)
-

@@ -24,5 +24,4 @@ class AsyncEntityDAOWithCache[T,  F[_]: Async, Q](val dao: EntityDAO[F, T, Q]) e
       cachingF(query)(Some(ttl)) {
         dao.find(query)
       }
-
 }
