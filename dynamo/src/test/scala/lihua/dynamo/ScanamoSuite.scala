@@ -1,8 +1,10 @@
 package lihua
 package dynamo
 
+import cats.effect.IO
 import org.scalatest.Matchers
 import org.scalatest.funsuite.AnyFunSuiteLike
+import cats.implicits._
 
 case class Farm(animals: List[String])
 case class Farmer(name: String, age: Long, farm: Farm)
@@ -14,8 +16,8 @@ class ScanamoSuite extends AnyFunSuiteLike with Matchers {
   import org.scanamo.auto._
 
   val client = LocalDynamoDB.client()
-  import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType._
-  LocalDynamoDB.createTable(client)("farmer")('name -> S)
+//  import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType._
+//  LocalDynamoDB.createTable(client)("farmer")('name -> S)
 
   val table = Table[Farmer]("farmer")
 
@@ -28,7 +30,11 @@ class ScanamoSuite extends AnyFunSuiteLike with Matchers {
            ))
          mcdonald <- table.get('name -> "McDonald")
        } yield mcdonald
-     Scanamo(client).exec(ops)
+
+    val o = ScanamoCats[IO](client).exec(ops) >>= (r => IO.delay(println(r)))
+
+     o.unsafeRunAsyncAndForget()
+
    }
 
 }
