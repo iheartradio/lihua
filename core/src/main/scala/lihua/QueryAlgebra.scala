@@ -5,7 +5,7 @@ import java.time.{LocalDate, OffsetDateTime}
 sealed trait QueryAlgebra extends Serializable with Product
 
 object QueryAlgebra {
-  type FieldName = String
+  type FieldName = Symbol
   
   case class And(left: QueryAlgebra, right: QueryAlgebra) extends QueryAlgebra
   case class Or(left: QueryAlgebra, right: QueryAlgebra) extends QueryAlgebra
