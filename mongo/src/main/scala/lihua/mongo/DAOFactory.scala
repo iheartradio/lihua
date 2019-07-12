@@ -20,10 +20,12 @@ abstract class DAOFactoryWithEnsure[A :Format, DAOF[_], F[_]](
 
   protected def ensure(collection: JSONCollection): F[Unit]
 
-  private def ensureCollection(collection: JSONCollection)(implicit  ec: ExecutionContext): F[Unit] =
+  private def ensureCollection(collection: JSONCollection)(implicit ec: ExecutionContext): F[Unit] = {
+    implicit val cs = IO.contextShift(ec)
     F.liftIO(IO.fromFuture(IO(collection.create().recover {
       case CommandError.Code(48 /*NamespaceExists*/ ) => ()
     })))
+  }
 
 
   def create(implicit mongoDB: MongoDB[F], ec: ExecutionContext): F[EntityDAO[DAOF, A, Query]] = {

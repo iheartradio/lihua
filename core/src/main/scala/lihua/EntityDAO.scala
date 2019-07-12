@@ -65,5 +65,19 @@ object EntityDAO {
       findOneOption(query).flatMap(
         _.fold(insert(t))(e => update(e.copy(data = t)))
       )
+
+    /**
+      * update the first entity query finds
+      *
+      * @param query  search query
+      * @param entity to be updated to
+      * @param upsert whether to insert of nothing is found
+      * @return whether anything is updated
+      */
+    def update(query: Query, entity: Entity[T], upsert: Boolean): F[Boolean] =
+      if(upsert) update(entity).as(true)
+      else
+        find(query).flatMap(_.traverse(e => update(e.copy(data = entity.data)))).map(_.nonEmpty)
+
   }
 }

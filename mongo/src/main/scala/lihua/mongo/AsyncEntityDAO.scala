@@ -32,6 +32,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
   extends EntityDAOMonad[AsyncEntityDAO.Result[F, ?], T, Query] {
   type R[A] = AsyncEntityDAO.Result[F, A]
   import AsyncEntityDAO.Result._
+  implicit val cs = IO.contextShift(ex)
 
   lazy val writeCollection = collection.withReadPreference(ReadPreference.primary) //due to a bug in ReactiveMongo
 
@@ -81,7 +82,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
   def update(entity: Entity[T]): R[Entity[T]] =
     update(Query.idSelector(entity._id), entity, false).as(entity)
 
-  def update(q: Query, entity: Entity[T], upsert: Boolean): R[Boolean] = of {
+  override def update(q: Query, entity: Entity[T], upsert: Boolean): R[Boolean] = of {
     writeCollection.update(ordered = false).one(q.selector, entity, upsert = upsert, multi = false)
   }.ensureOr(UpdatedCountErrorDetail(1, _))(_ <= 1).map(_ == 1)
 

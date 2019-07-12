@@ -4,7 +4,7 @@ package mongo
 import com.typesafe.config.{Config, ConfigFactory}
 import reactivemongo.api._
 import reactivemongo.play.json.collection.JSONCollection
-import cats.effect.{Async, IO, Resource, Sync}
+import cats.effect.{Async, ContextShift, IO, Resource, Sync}
 
 import scala.concurrent.{ExecutionContext, Future}
 import net.ceedubs.ficus.Ficus._
@@ -25,6 +25,7 @@ class MongoDB[F[_]: Async] private(private[mongo] val config: MongoDB.MongoConfi
   private def database(databaseName: String)(implicit ec: ExecutionContext): F[DB] = {
     val dbConfigO = config.dbs.get(s"$databaseName")
     val name = dbConfigO.flatMap(_.name).getOrElse(databaseName)
+    implicit val cs = IO.contextShift(ec)
     toF(connection.database(name))
   }
 
@@ -42,8 +43,9 @@ class MongoDB[F[_]: Async] private(private[mongo] val config: MongoDB.MongoConfi
   def close(implicit to: FiniteDuration = 2.seconds): F[Unit] =
     Sync[F].delay(driver.close(to))
 
-  protected def toF[B](f : => Future[B])(implicit ec: ExecutionContext) : F[B] =
+  protected def toF[B](f : => Future[B])(implicit ec: ContextShift[IO]) : F[B] =
     IO.fromFuture(IO(f)).to[F]
+
 }
 
 

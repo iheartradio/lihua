@@ -9,13 +9,19 @@ import org.scanamo.syntax._
 import org.scanamo.auto._
 import cats.implicits._
 import ScanamoEntityDAO._
+import lihua.EntityDAO.EntityDAOMonad
 import org.scanamo.error.DynamoReadError
 import org.scanamo.ops.ScanamoOps
 
 import scala.util.Random
 
-class ScanamoEntityDAO[F[_], A: DynamoFormat](tableName: String, idFieldName: FieldName, client: AmazonDynamoDBAsync)
-  (implicit F: Async[F]) extends EntityDAO[F, A, List[EntityId]]{
+class ScanamoEntityDAO[F[_], A: DynamoFormat]
+  (tableName: String,
+   idFieldName: FieldName,
+   client: AmazonDynamoDBAsync)
+  (implicit F: Async[F])
+  extends EntityDAOMonad[F, A, List[EntityId]]{
+
   private val table = Table[Entity[A]](tableName)
   private val sc = ScanamoCats[F](client)
 
@@ -24,7 +30,7 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat](tableName: String, idFieldName: Fi
       .flatMap(_.liftTo[F](MissingResultScanamoError)
       .flatMap(_.leftMap(ScanamoError(_)).liftTo[F]))
 
- private def execSet[T](ops: ScanamoOps[Set[Either[DynamoReadError, T]]]): F[Vector[T]] =
+  private def execSet[T](ops: ScanamoOps[Set[Either[DynamoReadError, T]]]): F[Vector[T]] =
     sc.exec(ops)
       .flatMap(_.toVector.traverse(_.leftMap(ScanamoError(_)).liftTo[F]))
 
@@ -51,22 +57,6 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat](tableName: String, idFieldName: Fi
   def remove(id: EntityId): F[Unit] = sc.exec(table.delete(idFieldName -> id)).void
 
   def removeAll(query: List[EntityId]): F[Int] = sc.exec(table.deleteAll(toUniqueKeys(query))).map(_.size)
-
-  /**
-    * update the first entity query finds
-    *
-    * @param query  search query
-    * @param entity to be updated to
-    * @param upsert whether to insert of nothing is found
-    * @return whether anything is updated
-    */
-  def update(query: List[EntityId], entity: Entity[A], upsert: Boolean): F[Boolean] =
-    if(upsert) update(entity).as(true)
-    else
-      find(query).flatMap(_.traverse(e => update(e.copy(data = entity.data)))).map(_.nonEmpty)
-
-  def upsert(query: List[EntityId], t: A): F[Entity[A]] =
-    findOneOption(query).flatMap(_.fold(insert(t))(existing => update(existing.copy(data = t))))
 
 }
 
