@@ -51,7 +51,7 @@ lazy val mongo = project
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.19" % Test,
       "org.apache.logging.log4j" % "log4j-core" % "2.11.1" % Test,
       "org.log4s" %% "log4s" % "1.6.1",
-      "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
+      "com.google.code.findbugs" % "jsr305" % "3.0.2" //needed by scalacache-caffeine
     )
   )
 
