@@ -47,7 +47,7 @@ lazy val mongo = project
       "scalacache-caffeine",
       "caffeine"),
     libraryDependencies ++= Seq(
-      "com.iheart" %% "ficus" % "1.4.3",
+      "com.iheart" %% "ficus" % "1.4.7",
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.19" % Test,
       "org.apache.logging.log4j" % "log4j-core" % "2.11.1" % Test,
       "org.log4s" %% "log4s" % "1.6.1",
