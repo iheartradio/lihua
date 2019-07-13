@@ -67,7 +67,7 @@ lazy val crypt = project
     libs.dependencies("cats-core"),
     libs.testDependencies("scalatest"),
     libraryDependencies ++= Seq(
-      "io.github.jmcardon" %% "tsec-cipher-jca" % "0.0.1-M11"
+      "io.github.jmcardon" %% "tsec-cipher-jca" % "0.0.1-RC1"
     ))
 
 lazy val taglessSettings = paradiseSettings(libs) ++ Seq(
