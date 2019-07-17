@@ -3,7 +3,6 @@ package lihua
 import cats.Monad
 import cats.tagless._
 
-import scala.concurrent.duration.Duration
 /**
  * Final tagless encoding of the DAO Algebra
  * @tparam F effect Monad
@@ -41,14 +40,6 @@ trait EntityDAO[F[_], T, Query] {
   def update(query: Query, entity: Entity[T], upsert: Boolean): F[Boolean]
 
   def upsert(query: Query, t: T): F[Entity[T]]
-}
-
-@autoFunctorK
-@autoContravariant
-trait EntityDAOWithCache[F[_], T, Query] {
-  def dao: EntityDAO[F, T, Query]
-  def invalidateCache(query: Query): F[Unit]
-  def findCached(query: Query, ttl: Duration): F[Vector[Entity[T]]]
 }
 
 object EntityDAO {

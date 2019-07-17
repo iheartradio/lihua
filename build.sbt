@@ -20,7 +20,7 @@ lazy val lihua = project.in(file("."))
   .settings(commonSettings)
   .settings(noPublishSettings,
             crossScalaVersions := Nil)
-  .aggregate(mongo, crypt, core, dynamo)
+  .aggregate(mongo, crypt, core, dynamo, cache)
 
 lazy val core = project
   .settings(moduleName := "lihua-core")
