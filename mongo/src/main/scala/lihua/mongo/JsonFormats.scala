@@ -6,8 +6,6 @@ package lihua
 package mongo
 
 import cats.Invariant
-import lihua.EntityId
-import lihua.EntityId.toEntityId
 import org.joda.time.DateTime
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
@@ -18,7 +16,7 @@ object JsonFormats {
 
   implicit object EntityIdFormat extends Format[EntityId] {
 
-    override def reads(json: JsValue): JsResult[EntityId] = (json \ "$oid").validate[String].map(toEntityId)
+    override def reads(json: JsValue): JsResult[EntityId] = (json \ "$oid").validate[String].map(EntityId(_))
 
     override def writes(o: EntityId): JsValue = Json.obj("$oid" → o.value)
   }

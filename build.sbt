@@ -1,5 +1,3 @@
-import org.typelevel.Dependencies._
-
 addCommandAlias("gitSnapshots", ";set version in ThisBuild := git.gitDescribedVersion.value.get + \"-SNAPSHOT\"")
 
 addCommandAlias("validate", ";clean;test")
@@ -14,14 +12,15 @@ lazy val libs =
     .addJVM("reactivemongo", version = reactiveMongoVer, org = "org.reactivemongo", "reactivemongo", "reactivemongo-iteratees" )
     .addJVM("reactivemongo-play-json", version = reactiveMongoVer + "-play27", org = "org.reactivemongo")
     .addJava("caffeine", version = "2.7.0", org = "com.github.ben-manes.caffeine")
-    .addJVM("scalacache-caffeine", version = "0.27.0", org = "com.github.cb372")
+    .addJVM("scalacache", version = "0.27.0", org = "com.github.cb372", "scalacache-cats-effect", "scalacache-caffeine")
     .addJVM("play-json", version = "2.7.3", org = "com.typesafe.play")
+    .addJVM("scanamo", version = "1.0.0-M10", org = "org.scanamo", "scanamo", "scanamo-cats-effect", "scanamo-testkit")
 
 lazy val lihua = project.in(file("."))
   .settings(commonSettings)
   .settings(noPublishSettings,
             crossScalaVersions := Nil)
-  .aggregate(mongo, crypt, core)
+  .aggregate(mongo, crypt, core, dynamo, cache)
 
 lazy val core = project
   .settings(moduleName := "lihua-core")
@@ -43,9 +42,7 @@ lazy val mongo = project
       "reactivemongo",
       "reactivemongo-iteratees",
       "reactivemongo-play-json",
-      "play-json",
-      "scalacache-caffeine",
-      "caffeine"),
+      "play-json"),
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.3",
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.19" % Test,
@@ -53,6 +50,37 @@ lazy val mongo = project
       "org.log4s" %% "log4s" % "1.6.1",
       "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
     )
+  )
+
+lazy val cache =  project
+  .dependsOn(core)
+  .aggregate(core)
+  .settings(moduleName := "lihua-cache")
+  .settings(commonSettings)
+  .settings(taglessSettings)
+  .settings(
+    crossScalaVersions := Seq(scalaVersion.value),
+    libs.testDependencies("scalatest"),
+    libs.dependencies(
+      "cats-effect",
+      "scalacache-caffeine",
+      "scalacache-cats-effect",
+      "caffeine"),
+    libraryDependencies ++= Seq(
+      "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
+    )
+  )
+
+lazy val dynamo =  project
+  .dependsOn(core)
+  .aggregate(core)
+  .settings(moduleName := "lihua-dynamo")
+  .settings(commonSettings)
+  .settings(taglessSettings)
+  .settings(
+    crossScalaVersions := Seq(scalaVersion.value),
+    libs.testDependencies("scalatest", "scanamo-testkit"),
+    libs.dependencies("scanamo-cats-effect")
   )
 
 lazy val crypt = project
@@ -72,7 +100,7 @@ lazy val crypt = project
 
 lazy val taglessSettings = paradiseSettings(libs) ++ Seq(
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-tagless-macros" % "0.5"
+    "org.typelevel" %% "cats-tagless-macros" % "0.9"
   )
 )
 
@@ -80,6 +108,7 @@ lazy val buildSettings = sharedBuildSettings(gh, libs)
 
 lazy val commonSettings = buildSettings ++ publishSettings ++ unidocCommonSettings ++ scoverageSettings ++ sharedCommonSettings ++ scalacAllSettings ++ Seq(
   parallelExecution in Test := false,
+  resolvers +="Sonatype OSS" at "https://oss.sonatype.org/service/local/repositories/releases/content/",
   sources in (Compile, doc) :=  Nil, //todo: somehow sbt doc hang, disable it for now so that I can release.
   crossScalaVersions := Seq(libs.vers("scalac_2.11"), scalaVersion.value),
   developers := List(Developer("@kailuowang", "Kailuo Wang", "kailuo.wang@gmail.com", new URL("http://kailuowang.com")))
@@ -92,4 +121,3 @@ lazy val commonJvmSettings = Seq()
 lazy val publishSettings = sharedPublishSettings(gh) ++ credentialSettings ++ sharedReleaseProcess
 
 lazy val scoverageSettings = sharedScoverageSettings(60)
-

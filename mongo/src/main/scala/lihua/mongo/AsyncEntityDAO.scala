@@ -22,11 +22,6 @@ import reactivemongo.api.Cursor.ErrorHandler
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 
-import scala.concurrent.duration.Duration
-import scalacache.Cache
-import scalacache.cachingF
-import scalacache.modes.scalaFuture._
-import scalacache.caffeine._
 
 import scala.util.control.NoStackTrace
 import JsonFormats._
@@ -37,8 +32,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
   extends EntityDAOMonad[AsyncEntityDAO.Result[F, ?], T, Query] {
   type R[A] = AsyncEntityDAO.Result[F, A]
   import AsyncEntityDAO.Result._
-
-  implicit val scalaCache: Cache[Vector[Entity[T]]] = CaffeineCache[Vector[Entity[T]]]
+  implicit val cs = IO.contextShift(ex)
 
   lazy val writeCollection = collection.withReadPreference(ReadPreference.primary) //due to a bug in ReactiveMongo
 
@@ -58,14 +52,9 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
     builder(q).one[Entity[T]](readPref(q))
   }
 
-  def invalidateCache(q: Query): R[Unit] =
-    of(scalacache.remove(q)).void
-
-  private def internalFind(q: Query): Future[Vector[Entity[T]]] = {
-
+  private def internalFind(q: Query): Future[Vector[Entity[T]]] =
     builder(q).cursor[Entity[T]](readPref(q)).
       collect[Vector](-1, errorHandler)
-  }
 
   private def readPref(q: Query) = q.readPreference.getOrElse(collection.readPreference)
 
@@ -77,17 +66,8 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
     builder
   }
 
-  def findCached(query: Query, ttl: Duration): R[Vector[Entity[T]]] = of {
-    if (ttl.length == 0L)
-      internalFind(query)
-    else
-      cachingF(query)(Some(ttl)) {
-        internalFind(query)
-      }
-  }
-
   def insert(t: T): R[Entity[T]] = {
-    val entity = Entity(BSONObjectID.generate.stringify, t)
+    val entity = t.toEntity(BSONObjectID.generate.stringify)
     of {
       writeCollection.insert(ordered = false).one(entity)
     }.ensureOr(UpdatedCountErrorDetail(1, _))(_ == 1).as(entity)
@@ -102,7 +82,7 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
   def update(entity: Entity[T]): R[Entity[T]] =
     update(Query.idSelector(entity._id), entity, false).as(entity)
 
-  def update(q: Query, entity: Entity[T], upsert: Boolean): R[Boolean] = of {
+  override def update(q: Query, entity: Entity[T], upsert: Boolean): R[Boolean] = of {
     writeCollection.update(ordered = false).one(q.selector, entity, upsert = upsert, multi = false)
   }.ensureOr(UpdatedCountErrorDetail(1, _))(_ <= 1).map(_ == 1)
 
@@ -118,6 +98,8 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
       case e: Throwable => DBException(e, collection.name).asLeft[A]
     }))))
 }
+
+
 
 object AsyncEntityDAO {
   type Result[F[_], T] = EitherT[F, DBError, T]
