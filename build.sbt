@@ -23,9 +23,11 @@ lazy val lihua = project.in(file("."))
   .aggregate(mongo, crypt, core, dynamo, cache)
 
 lazy val core = project
-  .settings(moduleName := "lihua-core")
-  .settings(commonSettings)
-  .settings(taglessSettings)
+  .settings(moduleName := "lihua-core",
+    commonSettings,
+    taglessSettings,
+    libs.dependency("newtype")
+  )
 
 lazy val mongo = project
   .dependsOn(core)
@@ -59,7 +61,6 @@ lazy val cache =  project
   .settings(commonSettings)
   .settings(taglessSettings)
   .settings(
-    crossScalaVersions := Seq(scalaVersion.value),
     libs.testDependencies("scalatest"),
     libs.dependencies(
       "cats-effect",

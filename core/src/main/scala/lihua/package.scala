@@ -1,8 +1,10 @@
 package lihua
 
-object `package` {
+import io.estatico.newtype.macros.newtype
 
-  type EntityId = EntityId.Type
+object `package` {
+  @newtype
+  case class EntityId(value: String)
 
   implicit def toDataOps[A](a: A): DataOps[A] = new DataOps(a)
 }
