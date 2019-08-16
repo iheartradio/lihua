@@ -40,6 +40,8 @@ trait EntityDAO[F[_], T, Query] {
   def update(query: Query, entity: Entity[T], upsert: Boolean): F[Boolean]
 
   def upsert(query: Query, t: T): F[Entity[T]]
+
+  def removeAll(): F[Int]
 }
 
 object EntityDAO {

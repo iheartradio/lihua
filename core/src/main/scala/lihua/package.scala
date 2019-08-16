@@ -7,6 +7,8 @@ object `package` {
   case class EntityId(value: String)
 
   implicit def toDataOps[A](a: A): DataOps[A] = new DataOps(a)
+
+  val idFieldName: Symbol = Symbol("_id")  //determined by the field name of Entity
 }
 
 private[lihua] class DataOps[A](private val a: A) extends AnyVal {

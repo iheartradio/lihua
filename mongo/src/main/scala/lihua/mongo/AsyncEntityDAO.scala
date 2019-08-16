@@ -90,6 +90,10 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
     writeCollection.delete().one(q.selector)
   }
 
+  def removeAll(): R[Int] = of {
+    writeCollection.delete().one(JsObject.empty)
+  }
+
   private val errorHandler: ErrorHandler[Vector[Entity[T]]] = Cursor.FailOnError()
 
   def of[A](f: => Future[Either[DBError, A]]): Result[F, A] =

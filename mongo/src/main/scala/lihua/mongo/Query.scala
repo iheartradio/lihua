@@ -19,9 +19,9 @@ case class Query (
 )
 
 object Query {
-  val idFieldName = "_id"
+  val idFieldNameStr = idFieldName.name
 
-  def idSelector(id: EntityId): JsObject = Json.obj(idFieldName -> id)
+  def idSelector(id: EntityId): JsObject = Json.obj(idFieldNameStr -> id)
 
   implicit def fromSelector(selector: JsObject): Query = Query(selector)
 
@@ -43,7 +43,7 @@ object Query {
   implicit def fromId(id: EntityId): Query = idSelector(id)
 
   implicit def fromIds(ids: List[EntityId]): Query =
-    Json.obj(idFieldName -> Json.obj("$in" -> ids.map(_.value)))
+    Json.obj(idFieldNameStr -> Json.obj("$in" -> ids.map(_.value)))
 
   def byProperty[PT: Format](propertyName: String, propertyValue: PT) =
     Query(Json.obj(propertyName -> propertyValue))
