@@ -10,36 +10,34 @@ import tsec.cipher.symmetric.jca._
 
 import scala.io.StdIn
 import cats.implicits._
+import lihua.crypt.CryptTsec.Base64Error
 
 class CryptTsec[F[_]](key: String)(implicit F: Sync[F]) extends Crypt[F] {
 
   private val ekeyF: F[SecretKey[AES128CTR]] =
-    AES128CTR.buildKey[F](key.base64Bytes)
+    b64(key).flatMap(AES128CTR.buildKey[F])
+
+
+  def b64(s: String): F[Array[Byte]] =
+    s.b64Bytes.liftTo[F](Base64Error)
 
   implicit val ctrStrategy: IvGen[F, AES128CTR] = AES128CTR.defaultIvStrategy[F]
 
   def encrypt(value: String): F[String] =
-    AES128CTR
-      .genEncryptor[F]
-      .flatMap(
-        implicit instance =>
-          for {
-            ekey      <- ekeyF
-            encrypted <- AES128CTR.encrypt[F](PlainText(value.utf8Bytes), ekey)
-          } yield (encrypted.content ++ encrypted.nonce).toB64String
-    )
+    for {
+      ekey <- ekeyF
+      encrypted <- AES128CTR.genEncryptor[F].encrypt(PlainText(value.utf8Bytes), ekey)
+    } yield (encrypted.content ++ encrypted.nonce).toB64String
+
 
   def decrypt(value: String): F[String] =
-    AES128CTR
-      .genEncryptor[F]
-      .flatMap(
-        implicit instance =>
-          for {
-            ekey <- ekeyF
-            toDecrypt <- F.fromEither(AES128CTR.ciphertextFromConcat(value.base64Bytes))
-            decrypted <- AES128CTR.decrypt[F](toDecrypt, ekey)
-          } yield decrypted.toUtf8String
-  )
+    for {
+      ekey <- ekeyF
+      vb <- b64(value)
+      cypherText <- AES128CTR.ciphertextFromConcat(vb).liftTo[F]
+      decrypted <- AES128CTR.genEncryptor[F].decrypt(cypherText, ekey)
+    } yield decrypted.toUtf8String
+
 }
 
 
@@ -49,6 +47,7 @@ object CryptTsec {
   def genKey[F[_]: Sync] : F[String] =
       AES128CTR.generateKey[F].map(_.getEncoded.toB64String)
 
+  case object Base64Error extends RuntimeException
 
   def main(args: Array[String]): Unit = {
     val command = args.headOption match {

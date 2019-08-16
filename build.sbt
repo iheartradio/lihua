@@ -12,9 +12,11 @@ lazy val libs =
     .addJVM("reactivemongo", version = reactiveMongoVer, org = "org.reactivemongo", "reactivemongo", "reactivemongo-iteratees" )
     .addJVM("reactivemongo-play-json", version = reactiveMongoVer + "-play27", org = "org.reactivemongo")
     .addJava("caffeine", version = "2.8.0", org = "com.github.ben-manes.caffeine")
-    .addJVM("scalacache", version = "0.27.0", org = "com.github.cb372", "scalacache-cats-effect", "scalacache-caffeine")
+    .addJVM("scalacache", version = "0.28.0", org = "com.github.cb372", "scalacache-cats-effect", "scalacache-caffeine")
     .addJVM("play-json", version = "2.7.4", org = "com.typesafe.play")
     .addJVM("scanamo", version = "1.0.0-M10", org = "org.scanamo", "scanamo", "scanamo-cats-effect", "scanamo-testkit")
+    .addJava( "jsr305" ,   version = "3.0.2", org = "com.google.code.findbugs")
+    .addJVM( "tsec-cipher-jca" ,   version = "0.0.1-RC1", org = "io.github.jmcardon")
 
 lazy val lihua = project.in(file("."))
   .settings(commonSettings)
@@ -46,11 +48,10 @@ lazy val mongo = project
       "reactivemongo-play-json",
       "play-json"),
     libraryDependencies ++= Seq(
-      "com.iheart" %% "ficus" % "1.4.3",
+      "com.iheart" %% "ficus" % "1.4.7",
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.24" % Test,
-      "org.apache.logging.log4j" % "log4j-core" % "2.11.1" % Test,
-      "org.log4s" %% "log4s" % "1.8.2",
-      "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
+      "org.apache.logging.log4j" % "log4j-core" % "2.11.2" % Test,
+      "org.log4s" %% "log4s" % "1.8.2"
     )
   )
 
@@ -66,10 +67,8 @@ lazy val cache =  project
       "cats-effect",
       "scalacache-caffeine",
       "scalacache-cats-effect",
-      "caffeine"),
-    libraryDependencies ++= Seq(
-      "com.google.code.findbugs" % "jsr305" % "3.0.0" //needed by scalacache-caffeine
-    )
+      "caffeine",
+      "jsr305"),
   )
 
 lazy val dynamo =  project
@@ -93,11 +92,9 @@ lazy val crypt = project
   .settings(taglessSettings)
   .settings(
     crossScalaVersions := Seq(scalaVersion.value),
-    libs.dependencies("cats-core"),
-    libs.testDependencies("scalatest"),
-    libraryDependencies ++= Seq(
-      "io.github.jmcardon" %% "tsec-cipher-jca" % "0.0.1-M11"
-    ))
+    libs.dependencies("cats-core", "tsec-cipher-jca"),
+    libs.testDependencies("scalatest")
+  )
 
 lazy val taglessSettings = paradiseSettings(libs) ++ Seq(
   libraryDependencies ++= Seq(
