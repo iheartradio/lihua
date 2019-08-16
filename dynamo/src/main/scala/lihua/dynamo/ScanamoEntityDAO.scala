@@ -3,7 +3,6 @@ package dynamo
 
 import cats.effect.Async
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsync
-import lihua.QueryAlgebra.FieldName
 import org.scanamo._
 import org.scanamo.syntax._
 import org.scanamo.auto._
@@ -17,7 +16,6 @@ import scala.util.Random
 
 class ScanamoEntityDAO[F[_], A: DynamoFormat]
   (tableName: String,
-   idFieldName: FieldName,
    client: AmazonDynamoDBAsync)
   (implicit F: Async[F])
   extends EntityDAOMonad[F, A, List[EntityId]]{
@@ -29,6 +27,10 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat]
     sc.exec(ops)
       .flatMap(_.liftTo[F](MissingResultScanamoError)
       .flatMap(_.leftMap(ScanamoError(_)).liftTo[F]))
+
+  private def execVoid[T](ops: ScanamoOps[Option[Either[DynamoReadError, T]]]): F[Unit] =
+    sc.exec(ops)
+      .flatMap(_.fold(F.unit)(_.leftMap(ScanamoError(_)).liftTo[F].void))
 
   private def execSet[T](ops: ScanamoOps[Set[Either[DynamoReadError, T]]]): F[Vector[T]] =
     sc.exec(ops)
@@ -43,9 +45,9 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat]
 
   private def toUniqueKeys(q: List[EntityId]) = idFieldName -> q.toSet.asInstanceOf[Set[String]]
 
-  def update(entity: Entity[A]): F[Entity[A]] = exec(table.put(entity))
+  def update(entity: Entity[A]): F[Entity[A]] = upsert(entity)
 
-  def upsert(entity: Entity[A]): F[Entity[A]] = exec(table.put(entity))
+  def upsert(entity: Entity[A]): F[Entity[A]] = execVoid(table.put(entity)).as(entity)
 
   def find(query: List[EntityId]): F[Vector[Entity[A]]] =
     execSet(table.getAll(toUniqueKeys(query)))
@@ -58,6 +60,14 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat]
 
   def removeAll(query: List[EntityId]): F[Int] = sc.exec(table.deleteAll(toUniqueKeys(query))).map(_.size)
 
+  def removeAll(): F[Int] = {
+    sc.exec(
+      for {
+        all <- table.scan()
+        ids = all.flatMap(_.toOption.map(_._id))
+        r <- table.deleteAll(toUniqueKeys(ids))
+      } yield r.size)
+  }
 }
 
 
