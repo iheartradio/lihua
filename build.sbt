@@ -22,7 +22,7 @@ lazy val lihua = project.in(file("."))
   .settings(commonSettings)
   .settings(noPublishSettings,
             crossScalaVersions := Nil)
-  .aggregate(mongo, crypt, core, dynamo, cache)
+  .aggregate(mongo, crypt, core, dynamo, cache, playJson)
 
 lazy val core = project
   .settings(moduleName := "lihua-core",
@@ -31,9 +31,19 @@ lazy val core = project
     libs.dependency("newtype")
   )
 
-lazy val mongo = project
+lazy val playJson = project
   .dependsOn(core)
   .aggregate(core)
+  .settings(
+    moduleName := "lihua-play-json",
+    commonSettings,
+    libs.dependencies("play-json")
+  )
+
+
+lazy val mongo = project
+  .dependsOn(playJson)
+  .aggregate(playJson)
   .settings(moduleName := "lihua-mongo")
   .settings(commonSettings)
   .settings(taglessSettings)
@@ -45,8 +55,7 @@ lazy val mongo = project
       "cats-effect",
       "reactivemongo",
       "reactivemongo-iteratees",
-      "reactivemongo-play-json",
-      "play-json"),
+      "reactivemongo-play-json"),
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.7",
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.24" % Test,
