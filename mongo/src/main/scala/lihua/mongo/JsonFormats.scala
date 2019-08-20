@@ -7,7 +7,6 @@ package mongo
 
 import cats.Invariant
 import org.joda.time.DateTime
-import play.api.libs.json.Json.toJson
 import play.api.libs.json._
 
 import scala.reflect.ClassTag
