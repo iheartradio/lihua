@@ -49,7 +49,7 @@ lazy val mongo = project
       "play-json"),
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.7",
-      "com.typesafe.akka" %% "akka-slf4j" % "2.5.24" % Test,
+      "com.typesafe.akka" %% "akka-slf4j" % "2.5.25" % Test,
       "org.apache.logging.log4j" % "log4j-core" % "2.12.1" % Test,
       "org.log4s" %% "log4s" % "1.8.2"
     )
