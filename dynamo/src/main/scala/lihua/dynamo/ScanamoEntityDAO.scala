@@ -8,6 +8,8 @@ import org.scanamo.syntax._
 import org.scanamo.auto._
 import cats.implicits._
 import ScanamoEntityDAO._
+import com.amazonaws.handlers.AsyncHandler
+import com.amazonaws.services.dynamodbv2.model.{AttributeDefinition, CreateTableRequest, CreateTableResult, KeySchemaElement, KeyType, ProvisionedThroughput, ScalarAttributeType}
 import lihua.EntityDAO.EntityDAOMonad
 import org.scanamo.error.DynamoReadError
 import org.scanamo.ops.ScanamoOps
@@ -78,4 +80,43 @@ object ScanamoEntityDAO {
   case object MissingResultScanamoError extends RuntimeException
   case object UnexpectedNumberOfResult extends RuntimeException
   case class ScanamoError(se: org.scanamo.error.ScanamoError) extends RuntimeException
+  import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType._
+  import scala.collection.JavaConverters._
+
+  private def attributeDefinitions(attributes: Seq[(Symbol, ScalarAttributeType)]) =
+    attributes.map { case (symbol, attributeType) => new AttributeDefinition(symbol.name, attributeType) }.asJava
+
+
+  private def keySchema(attributes: Seq[(Symbol, ScalarAttributeType)]) = {
+    val hashKeyWithType :: rangeKeyWithType = attributes.toList
+    val keySchemas = hashKeyWithType._1 -> KeyType.HASH :: rangeKeyWithType.map(_._1 -> KeyType.RANGE)
+    keySchemas.map { case (symbol, keyType) => new KeySchemaElement(symbol.name, keyType) }.asJava
+  }
+
+  def createTable[F[_]](client: AmazonDynamoDBAsync, tableName: String, readCapacityUnits: Long = 1000L, writeCapacityUnits: Long = 1000L)(implicit F: Async[F]): F[Unit] = {
+
+    val attributes = Seq(lihua.idFieldName -> S)
+    val req = new CreateTableRequest(tableName, keySchema(attributes))
+      .withAttributeDefinitions(attributeDefinitions(attributes))
+      .withProvisionedThroughput(
+      new ProvisionedThroughput(readCapacityUnits, writeCapacityUnits)
+    )
+
+    F.async { (cb: Either[Throwable, CreateTableResult] => Unit) =>
+      val handler = new AsyncHandler[CreateTableRequest, CreateTableResult] {
+        def onError(exception: Exception): Unit =
+          cb(Left(exception))
+
+        def onSuccess(req: CreateTableRequest, result: CreateTableResult): Unit =
+          cb(Right(result))
+      }
+
+      client.createTableAsync(
+        req,
+        handler
+      )
+      ()
+    }.void
+  }
+
 }
