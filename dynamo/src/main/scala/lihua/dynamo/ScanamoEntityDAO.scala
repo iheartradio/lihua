@@ -9,7 +9,7 @@ import org.scanamo.auto._
 import cats.implicits._
 import ScanamoEntityDAO._
 import com.amazonaws.handlers.AsyncHandler
-import com.amazonaws.services.dynamodbv2.model.{AttributeDefinition, CreateTableRequest, CreateTableResult, KeySchemaElement, KeyType, ProvisionedThroughput, ScalarAttributeType}
+import com.amazonaws.services.dynamodbv2.model.{AttributeDefinition, CreateTableRequest, CreateTableResult, DescribeTableRequest, DescribeTableResult, KeySchemaElement, KeyType, ProvisionedThroughput, ResourceNotFoundException, ScalarAttributeType}
 import lihua.EntityDAO.EntityDAOMonad
 import org.scanamo.error.DynamoReadError
 import org.scanamo.ops.ScanamoOps
@@ -93,7 +93,26 @@ object ScanamoEntityDAO {
     keySchemas.map { case (symbol, keyType) => new KeySchemaElement(symbol.name, keyType) }.asJava
   }
 
-  def createTable[F[_]](client: AmazonDynamoDBAsync, tableName: String, readCapacityUnits: Long = 1000L, writeCapacityUnits: Long = 1000L)(implicit F: Async[F]): F[Unit] = {
+  private def asyncHandle[F[_], Req <: com.amazonaws.AmazonWebServiceRequest, Resp](f: AsyncHandler[Req, Resp] => java.util.concurrent.Future[Resp])(
+    implicit F: Async[F]): F[Resp] =
+    F.async { (cb: Either[Throwable, Resp] => Unit) =>
+      val handler = new AsyncHandler[Req, Resp] {
+        def onError(exception: Exception): Unit =
+          cb(Left(exception))
+
+        def onSuccess(req: Req, result: Resp): Unit =
+          cb(Right(result))
+      }
+
+      f(handler)
+      ()
+    }
+
+  def createTable[F[_]](client: AmazonDynamoDBAsync,
+                        tableName: String,
+                        readCapacityUnits: Long = 1000L,
+                        writeCapacityUnits: Long = 1000L
+                       )(implicit F: Async[F]): F[Unit] = {
 
     val attributes = Seq(lihua.idFieldName -> S)
     val req = new CreateTableRequest(tableName, keySchema(attributes))
@@ -102,21 +121,25 @@ object ScanamoEntityDAO {
       new ProvisionedThroughput(readCapacityUnits, writeCapacityUnits)
     )
 
-    F.async { (cb: Either[Throwable, CreateTableResult] => Unit) =>
-      val handler = new AsyncHandler[CreateTableRequest, CreateTableResult] {
-        def onError(exception: Exception): Unit =
-          cb(Left(exception))
 
-        def onSuccess(req: CreateTableRequest, result: CreateTableResult): Unit =
-          cb(Right(result))
-      }
+    asyncHandle[F, CreateTableRequest, CreateTableResult](client.createTableAsync(req, _)).void
 
-      client.createTableAsync(
-        req,
-        handler
-      )
-      ()
-    }.void
   }
+
+  def ensureTable[F[_]](client: AmazonDynamoDBAsync,
+                        tableName: String,
+                        readCapacityUnits: Long = 1000L,
+                        writeCapacityUnits: Long = 1000L
+                       )(implicit F: Async[F]): F[Unit] = {
+    asyncHandle[F, DescribeTableRequest, DescribeTableResult](
+      client.describeTableAsync(new DescribeTableRequest(tableName), _)
+    ).void.recoverWith {
+      case e: ResourceNotFoundException =>
+        createTable(client, tableName, readCapacityUnits, writeCapacityUnits)
+    }
+
+  }
+
+
 
 }
