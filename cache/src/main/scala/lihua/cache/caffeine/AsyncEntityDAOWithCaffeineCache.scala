@@ -1,6 +1,7 @@
 package lihua.cache.caffeine
 
 import cats.Functor
+import cats.effect.{Resource, Sync}
 import cats.implicits._
 import lihua.cache.EntityCache
 import lihua.{Entity, EntityDAO}
@@ -9,17 +10,9 @@ import scalacache.{Cache, Mode, cachingF}
 
 import scala.concurrent.duration.Duration
 
-object implicits {
-  implicit def toAsyncWithCaffeineCache[T,  F[_]: Mode: Functor, Q](dao: EntityDAO[F, T, Q]): EntityCache[T, F, Q] =
-    new AsyncEntityDAOWithCaffeineCache(dao)
-}
+class AsyncEntityDAOWithCaffeineCache[T,  F[_]: Mode: Functor, Q] private (val dao: EntityDAO[F, T, Q])(implicit scalaCache: Cache[Vector[Entity[T]]]) extends EntityCache[T, F, Q] {
 
-
-class AsyncEntityDAOWithCaffeineCache[T,  F[_]: Mode: Functor, Q](private val dao: EntityDAO[F, T, Q]) extends EntityCache[T, F, Q] {
-
-  implicit val scalaCache: Cache[Vector[Entity[T]]] = CaffeineCache[Vector[Entity[T]]]
-
-  def invalidateCache(q: Q): F[Unit] =
+   def invalidateCache(q: Q): F[Unit] =
     scalacache.remove(q).void
 
   def findCached(query: Q, ttl: Duration): F[Vector[Entity[T]]] =
@@ -29,4 +22,13 @@ class AsyncEntityDAOWithCaffeineCache[T,  F[_]: Mode: Functor, Q](private val da
       cachingF(query)(Some(ttl)) {
         dao.find(query)
       }
+}
+
+
+object AsyncEntityDAOWithCaffeineCache {
+  def resource[T,  F[_]: Mode, Q](dao: EntityDAO[F, T, Q])(implicit F: Sync[F]): Resource[F, EntityCache[T, F, Q]] = {
+    Resource.make(F.delay(CaffeineCache[Vector[Entity[T]]]))(
+      _.close[F]().void
+    ).map(implicit sc => new AsyncEntityDAOWithCaffeineCache(dao))
+  }
 }
