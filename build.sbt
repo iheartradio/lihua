@@ -107,7 +107,7 @@ lazy val crypt = project
 
 lazy val taglessSettings = paradiseSettings(libs) ++ Seq(
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-tagless-macros" % "0.9"
+    "org.typelevel" %% "cats-tagless-macros" % "0.10"
   )
 )
 
