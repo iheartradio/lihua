@@ -15,6 +15,7 @@ import org.scanamo.error.DynamoReadError
 import org.scanamo.ops.ScanamoOps
 
 import scala.util.Random
+import io.estatico.newtype.ops._
 
 class ScanamoEntityDAO[F[_], A: DynamoFormat]
   (tableName: String,
@@ -45,7 +46,7 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat]
       exec(table.put(t.toEntity(id)))
     }
 
-  private def toUniqueKeys(q: List[EntityId]) = idFieldName -> q.toSet.asInstanceOf[Set[String]]
+  private def toUniqueKeys(q: List[EntityId]) = idFieldName -> q.toSet.coerce[Set[String]]
 
   def update(entity: Entity[A]): F[Entity[A]] = upsert(entity)
 
@@ -83,14 +84,14 @@ object ScanamoEntityDAO {
   import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType._
   import scala.collection.JavaConverters._
 
-  private def attributeDefinitions(attributes: Seq[(Symbol, ScalarAttributeType)]) =
-    attributes.map { case (symbol, attributeType) => new AttributeDefinition(symbol.name, attributeType) }.asJava
+  private def attributeDefinitions(attributes: Seq[(String, ScalarAttributeType)]) =
+    attributes.map { case (symbol, attributeType) => new AttributeDefinition(symbol, attributeType) }.asJava
 
 
-  private def keySchema(attributes: Seq[(Symbol, ScalarAttributeType)]) = {
+  private def keySchema(attributes: Seq[(String, ScalarAttributeType)]) = {
     val hashKeyWithType :: rangeKeyWithType = attributes.toList
     val keySchemas = hashKeyWithType._1 -> KeyType.HASH :: rangeKeyWithType.map(_._1 -> KeyType.RANGE)
-    keySchemas.map { case (symbol, keyType) => new KeySchemaElement(symbol.name, keyType) }.asJava
+    keySchemas.map { case (symbol, keyType) => new KeySchemaElement(symbol, keyType) }.asJava
   }
 
   private def asyncHandle[F[_], Req <: com.amazonaws.AmazonWebServiceRequest, Resp](f: AsyncHandler[Req, Resp] => java.util.concurrent.Future[Resp])(

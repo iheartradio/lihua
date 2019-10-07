@@ -14,7 +14,7 @@ lazy val libs =
     .addJava("caffeine", version = "2.8.0", org = "com.github.ben-manes.caffeine")
     .addJVM("scalacache", version = "0.28.0", org = "com.github.cb372", "scalacache-cats-effect", "scalacache-caffeine")
     .addJVM("play-json", version = "2.7.4", org = "com.typesafe.play")
-    .addJVM("scanamo", version = "1.0.0-M10", org = "org.scanamo", "scanamo", "scanamo-cats-effect", "scanamo-testkit")
+    .addJVM("scanamo", version = "1.0.0-M11", org = "org.scanamo", "scanamo", "scanamo-cats-effect", "scanamo-testkit")
     .addJava( "jsr305" ,   version = "3.0.2", org = "com.google.code.findbugs")
     .addJVM( "tsec-cipher-jca" ,   version = "0.2.0-M1", org = "io.github.jmcardon")
 
@@ -105,11 +105,8 @@ lazy val crypt = project
     libs.testDependencies("scalatest")
   )
 
-lazy val taglessSettings = paradiseSettings(libs) ++ Seq(
-  libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-tagless-macros" % "0.9"
-  )
-)
+lazy val taglessSettings = paradiseSettings(libs) ++ libs.dependency("cats-tagless-macros")
+
 
 lazy val buildSettings = sharedBuildSettings(gh, libs)
 
