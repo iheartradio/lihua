@@ -22,7 +22,7 @@ lazy val lihua = project.in(file("."))
   .settings(commonSettings)
   .settings(noPublishSettings,
             crossScalaVersions := Nil)
-  .aggregate(mongo, crypt, core, dynamo, cache, playJson)
+  .aggregate(mongo, crypt, core, dynamo, cache, playJson, dynamoTestkit)
 
 lazy val core = project
   .settings(moduleName := "lihua-core",
@@ -90,6 +90,18 @@ lazy val dynamo =  project
     crossScalaVersions := Seq(scalaVersion.value),
     libs.testDependencies("scalatest", "scanamo-testkit"),
     libs.dependencies("scanamo-cats-effect")
+  )
+
+lazy val dynamoTestkit =  project
+  .dependsOn(dynamo)
+  .aggregate(dynamo)
+  .settings(moduleName := "lihua-dynamo-testkit")
+  .settings(commonSettings)
+  .settings(taglessSettings)
+  .settings(
+    crossScalaVersions := Seq(scalaVersion.value),
+    libs.testDependencies("scalatest"),
+    libs.dependencies("scanamo-testkit")
   )
 
 lazy val crypt = project
