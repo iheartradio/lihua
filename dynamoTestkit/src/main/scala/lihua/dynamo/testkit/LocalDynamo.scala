@@ -4,8 +4,8 @@ import cats.effect.{Async, Resource, Sync}
 import lihua.dynamo.ScanamoEntityDAO
 import org.scanamo.LocalDynamoDB
 import cats.implicits._
-
 import cats.Parallel
+import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException
 
 object LocalDynamo {
 
@@ -27,7 +27,9 @@ object LocalDynamo {
         )
       } { _ =>
         tables.toList.parTraverse { t =>
-          F.delay(LocalDynamoDB.deleteTable(client)(t))
+          F.delay(LocalDynamoDB.deleteTable(client)(t)).void.recover {
+            case e: ResourceNotFoundException => ()
+          }
         }.void
       }
     }
