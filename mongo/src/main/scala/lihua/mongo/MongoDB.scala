@@ -93,7 +93,6 @@ object MongoDB {
           )
           .resolve
       )
-      _ <- F.delay(println(mongoCfg))
       d <- F.delay(MongoDriver(mongoCfg, this.getClass.getClassLoader))
       options = MongoConnectionOptions.default.copy(
         sslEnabled = config.sslEnabled,
