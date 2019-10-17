@@ -1,7 +1,7 @@
 /*
-* Copyright [2017] [iHeartMedia Inc]
-* All rights reserved
-*/
+ * Copyright [2017] [iHeartMedia Inc]
+ * All rights reserved
+ */
 package lihua
 package mongo
 import cats.effect.IO
@@ -10,9 +10,8 @@ import org.scalatest.Matchers
 import org.scalatest.funsuite.AnyFunSuiteLike
 import play.api.libs.json.{Format, Json}
 import reactivemongo.play.json.collection.JSONCollection
+
 import scala.concurrent.ExecutionContext.Implicits.global
-
-
 
 class EntityDAOTests extends AnyFunSuiteLike with Matchers {
   test("no side effect before performing unsafe IO with task") {
@@ -23,8 +22,8 @@ class EntityDAOTests extends AnyFunSuiteLike with Matchers {
     succeed
   }
 
-  lazy val localConfig = ConfigFactory.parseString(
-      """
+  lazy val localConfig =
+    ConfigFactory.parseString("""
         |mongoDB {
         |  hosts: ["127.0.0.1:27017"]
         |}
@@ -46,30 +45,43 @@ class EntityDAOTests extends AnyFunSuiteLike with Matchers {
   }
 
   test("CRUD smoke") {
-    val (retrieved, tryRetrieve) = MongoDB.resource[IO](localConfig).use { implicit mongoDB =>
-      for {
-        dao <- TestEntityDAOFactory.create
-        inserted <- dao.insert(TestEntity("blah"))
-        retrieved <- dao.get(inserted._id)
-        _ <- dao.remove(inserted._id)
-        tryFind <- dao.findOneOption(Query.idSelector(inserted._id))
-      } yield (retrieved, tryFind)
-    }.unsafeRunSync()
+    val (retrieved, tryRetrieve) = MongoDB
+      .resource[IO](localConfig)
+      .use { implicit mongoDB =>
+        for {
+          dao <- TestEntityDAOFactory.create
+          inserted <- dao.insert(TestEntity("blah"))
+          retrieved <- dao.get(inserted._id)
+          _ <- dao.remove(inserted._id)
+          tryFind <- dao.findOneOption(Query.idSelector(inserted._id))
+        } yield (retrieved, tryFind)
+      }
+      .unsafeRunSync()
 
     retrieved.data.a shouldBe "blah"
     tryRetrieve shouldBe empty
   }
 
   test("contramap") {
-    cats.Contravariant[EntityDAO[IO, TestEntity, ?]]
+    cats.Contravariant[EntityDAO[IO, TestEntity, *]]
+  }
+
+  test("clean close") {
+    import reactivemongo.api.{MongoConnection, MongoDriver}
+
+    val mongoUri = "mongodb://localhost:27017"
+    val driver = MongoDriver()
+    val parsedUri = MongoConnection.parseURI(mongoUri)
+    val connection = parsedUri.map(s => driver.connection(Seq(mongoUri)))
+    driver.close()
   }
 }
 
-
-object TestEntityDAOFactory extends DirectDAOFactory[TestEntity, IO]("test", "test") {
-  override protected def ensure(collection: JSONCollection): IO[Unit] = IO.unit
+object TestEntityDAOFactory
+    extends DirectDAOFactory[TestEntity, IO]("test", "test") {
+  override protected def ensure(collection: JSONCollection): IO[Unit] =
+    IO.unit
 }
-
 
 case class TestEntity(a: String)
 object TestEntity {
