@@ -3,13 +3,13 @@ package mongo
 
 import cats.effect.IO
 import com.typesafe.config.ConfigFactory
-import org.scalatest.Matchers
 import org.scalatest.funsuite.AnyFunSuiteLike
 
 import reactivemongo.api.MongoConnectionOptions.Credential
 import reactivemongo.api.ReadPreference
 
 import concurrent.duration._
+import org.scalatest.matchers.should.Matchers
 class MongoDBTests extends AnyFunSuiteLike with Matchers {
 
   object mockCrypt extends Crypt[IO] {

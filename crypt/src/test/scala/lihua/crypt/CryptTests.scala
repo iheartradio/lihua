@@ -2,8 +2,9 @@ package lihua
 package crypt
 
 import cats.effect.IO
-import org.scalatest.{EitherValues, Matchers}
+import org.scalatest.EitherValues
 import org.scalatest.funsuite.AnyFunSuiteLike
+import org.scalatest.matchers.should.Matchers
 
 class CryptTests extends AnyFunSuiteLike with Matchers with EitherValues {
   type F[A] = IO[A]
