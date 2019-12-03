@@ -1,16 +1,28 @@
-addCommandAlias("gitSnapshots", ";set version in ThisBuild := git.gitDescribedVersion.value.get + \"-SNAPSHOT\"")
+addCommandAlias(
+  "gitSnapshots",
+  ";set version in ThisBuild := git.gitDescribedVersion.value.get + \"-SNAPSHOT\""
+)
 
 addCommandAlias("validate", ";clean;test")
 
-val apache2 = "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.html")
-val gh = GitHubSettings(org = "iheartradio", proj = "lihua", publishOrg = "com.iheart", license = apache2)
+val apache2 = "Apache-2.0" -> url(
+  "https://www.apache.org/licenses/LICENSE-2.0.html"
+)
 
-val reactiveMongoVer = "0.18.7"
+val gh = GitHubSettings(
+  org = "iheartradio",
+  proj = "lihua",
+  publishOrg = "com.iheart",
+  license = apache2
+)
 
+val reactiveMongoVer = "0.19.2"
+
+// format: off
 lazy val libs =
   org.typelevel.libraries
     .addJVM("reactivemongo", version = reactiveMongoVer, org = "org.reactivemongo", "reactivemongo", "reactivemongo-iteratees" )
-    .addJVM("reactivemongo-play-json", version = reactiveMongoVer + "-play27", org = "org.reactivemongo")
+    .addJVM("reactivemongo-play-json-compat", version = reactiveMongoVer + "-play27", org = "org.reactivemongo")
     .addJava("caffeine", version = "2.8.0", org = "com.github.ben-manes.caffeine")
     .addJVM("scalacache", version = "0.28.0", org = "com.github.cb372", "scalacache-cats-effect", "scalacache-caffeine")
     .addJVM("play-json", version = "2.7.4", org = "com.typesafe.play")
@@ -18,15 +30,17 @@ lazy val libs =
     .addJava( "jsr305" ,   version = "3.0.2", org = "com.google.code.findbugs")
     .addJava( "slf4j-simple" ,   version = "1.7.28", org = "org.slf4j")
     .addJVM( "tsec-cipher-jca" ,   version = "0.2.0-M2", org = "io.github.jmcardon")
+// format: on
 
-lazy val lihua = project.in(file("."))
+lazy val lihua = project
+  .in(file("."))
   .settings(commonSettings)
-  .settings(noPublishSettings,
-            crossScalaVersions := Nil)
+  .settings(noPublishSettings, crossScalaVersions := Nil)
   .aggregate(mongo, crypt, core, dynamo, cache, playJson, dynamoTestkit)
 
 lazy val core = project
-  .settings(moduleName := "lihua-core",
+  .settings(
+    moduleName := "lihua-core",
     commonSettings,
     taglessSettings,
     libs.dependency("newtype")
@@ -40,7 +54,6 @@ lazy val playJson = project
     commonSettings,
     libs.dependencies("play-json")
   )
-
 
 lazy val mongo = project
   .dependsOn(playJson)
@@ -56,7 +69,8 @@ lazy val mongo = project
       "cats-effect",
       "reactivemongo",
       "reactivemongo-iteratees",
-      "reactivemongo-play-json"),
+      "reactivemongo-play-json-compat"
+    ),
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.7",
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.26" % Test,
@@ -65,7 +79,7 @@ lazy val mongo = project
     )
   )
 
-lazy val cache =  project
+lazy val cache = project
   .dependsOn(core)
   .aggregate(core)
   .settings(moduleName := "lihua-cache")
@@ -78,10 +92,11 @@ lazy val cache =  project
       "scalacache-caffeine",
       "scalacache-cats-effect",
       "caffeine",
-      "jsr305"),
+      "jsr305"
+    )
   )
 
-lazy val dynamo =  project
+lazy val dynamo = project
   .dependsOn(core)
   .aggregate(core)
   .settings(moduleName := "lihua-dynamo")
@@ -93,7 +108,7 @@ lazy val dynamo =  project
     libs.dependencies("scanamo-cats-effect")
   )
 
-lazy val dynamoTestkit =  project
+lazy val dynamoTestkit = project
   .dependsOn(dynamo)
   .aggregate(dynamo)
   .settings(moduleName := "lihua-dynamo-testkit")
@@ -118,17 +133,25 @@ lazy val crypt = project
     libs.testDependencies("scalatest")
   )
 
-lazy val taglessSettings = paradiseSettings(libs) ++ libs.dependency("cats-tagless-macros")
-
+lazy val taglessSettings = paradiseSettings(libs) ++ libs.dependency(
+  "cats-tagless-macros"
+)
 
 lazy val buildSettings = sharedBuildSettings(gh, libs)
 
 lazy val commonSettings = buildSettings ++ publishSettings ++ unidocCommonSettings ++ scoverageSettings ++ sharedCommonSettings ++ scalacAllSettings ++ Seq(
   parallelExecution in Test := false,
-  resolvers +="Sonatype OSS" at "https://oss.sonatype.org/service/local/repositories/releases/content/",
-  sources in (Compile, doc) :=  Nil, //todo: somehow sbt doc hang, disable it for now so that I can release.
+  resolvers += "Sonatype OSS" at "https://oss.sonatype.org/service/local/repositories/releases/content/",
+  sources in (Compile, doc) := Nil, //todo: somehow sbt doc hang, disable it for now so that I can release.
   crossScalaVersions := Seq(libs.vers("scalac_2.11"), scalaVersion.value),
-  developers := List(Developer("@kailuowang", "Kailuo Wang", "kailuo.wang@gmail.com", new URL("http://kailuowang.com")))
+  developers := List(
+    Developer(
+      "@kailuowang",
+      "Kailuo Wang",
+      "kailuo.wang@gmail.com",
+      new URL("http://kailuowang.com")
+    )
+  )
 ) ++ addCompilerPlugins(libs, "kind-projector")
 
 lazy val commonJsSettings = Seq(scalaJSStage in Global := FastOptStage)
