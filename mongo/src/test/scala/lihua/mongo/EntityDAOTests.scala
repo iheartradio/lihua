@@ -6,10 +6,10 @@ package lihua
 package mongo
 import cats.effect.IO
 import com.typesafe.config.ConfigFactory
-import org.scalatest.Matchers
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.funsuite.AnyFunSuiteLike
 import play.api.libs.json.{Format, Json}
-import reactivemongo.play.json.collection.JSONCollection
+import reactivemongo.api.bson.collection.BSONCollection
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -65,21 +65,11 @@ class EntityDAOTests extends AnyFunSuiteLike with Matchers {
   test("contramap") {
     cats.Contravariant[EntityDAO[IO, TestEntity, *]]
   }
-
-  test("clean close") {
-    import reactivemongo.api.{MongoConnection, MongoDriver}
-
-    val mongoUri = "mongodb://localhost:27017"
-    val driver = MongoDriver()
-    val parsedUri = MongoConnection.parseURI(mongoUri)
-    val connection = parsedUri.map(s => driver.connection(Seq(mongoUri)))
-    driver.close()
-  }
 }
 
 object TestEntityDAOFactory
     extends DirectDAOFactory[TestEntity, IO]("test", "test") {
-  override protected def ensure(collection: JSONCollection): IO[Unit] =
+  override protected def ensure(collection: BSONCollection): IO[Unit] =
     IO.unit
 }
 

@@ -2,7 +2,7 @@ package lihua
 package mongo
 
 import cats.effect.IO
-import org.scalatest.Matchers
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.funsuite.AnyFunSuiteLike
 import play.api.libs.json.Json
 
@@ -17,7 +17,7 @@ class QuerySyntaxTests extends AnyFunSuiteLike with Matchers {
     testDAO.findOne(('a -> 1, 'b -> "d"))
     testDAO.findOne(('a -> 1, 'b -> 2.0, 'c -> "dfd", 'd -> true))
 
-    (('a -> 1, 'b -> "d"):Query) shouldBe (Json.obj("a" -> 1, "b" -> "d"):Query)
+    (('a -> 1, 'b -> "d"): Query) shouldBe (Json.obj("a" -> 1, "b" -> "d"): Query)
     succeed
   }
 }
