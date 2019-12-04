@@ -22,7 +22,7 @@ val reactiveMongoVer = "0.19.2"
 lazy val libs =
   org.typelevel.libraries
     .addJVM("reactivemongo", version = reactiveMongoVer, org = "org.reactivemongo", "reactivemongo", "reactivemongo-iteratees" )
-    .addJVM("reactivemongo-play-json-compat", version = reactiveMongoVer + "-play27", org = "org.reactivemongo")
+    .addJVM("reactivemongo-play-json", version = reactiveMongoVer + "-play27", org = "org.reactivemongo")
     .addJava("caffeine", version = "2.8.0", org = "com.github.ben-manes.caffeine")
     .addJVM("scalacache", version = "0.28.0", org = "com.github.cb372", "scalacache-cats-effect", "scalacache-caffeine")
     .addJVM("play-json", version = "2.7.4", org = "com.typesafe.play")
@@ -69,14 +69,15 @@ lazy val mongo = project
       "cats-effect",
       "reactivemongo",
       "reactivemongo-iteratees",
-      "reactivemongo-play-json-compat"
+      "reactivemongo-play-json"
     ),
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.7",
       "com.typesafe.akka" %% "akka-slf4j" % "2.5.26" % Test,
       "org.apache.logging.log4j" % "log4j-core" % "2.12.1" % Test,
       "org.log4s" %% "log4s" % "1.8.2"
-    )
+    ),
+    scalacOptions += "-deprecation:false" //disabled due to the deprecation of reactivemongo-play-json while the new api isn't stable enough
   )
 
 lazy val cache = project

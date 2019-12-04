@@ -3,6 +3,6 @@ Configuration:
 
   Loggers:
     Root:
-      level: warn
+      level: info
       AppenderRef:
         ref: STDOUT

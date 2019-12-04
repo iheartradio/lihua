@@ -8,7 +8,8 @@ package mongo
 import cats.data.{EitherT, NonEmptyList}
 import lihua.mongo.DBError._
 import play.api.libs.json.{Format, JsObject}
-import reactivemongo.play.json.compat._
+import reactivemongo.play.json.collection.JSONCollection
+import reactivemongo.play.json._
 import cats.implicits._
 
 import scala.concurrent.{Future, ExecutionContext => EC}
@@ -21,22 +22,19 @@ import reactivemongo.api.Cursor.ErrorHandler
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 
+
 import scala.util.control.NoStackTrace
 import JsonFormats._
 import lihua.EntityDAO.EntityDAOMonad
-import reactivemongo.api.bson.collection.BSONCollection
 
-class AsyncEntityDAO[T: Format, F[_]: Async](
-    collection: BSONCollection
-  )(implicit ex: EC)
-    extends EntityDAOMonad[AsyncEntityDAO.Result[F, *], T, Query] {
+
+class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit ex: EC)
+  extends EntityDAOMonad[AsyncEntityDAO.Result[F, ?], T, Query] {
   type R[A] = AsyncEntityDAO.Result[F, A]
   import AsyncEntityDAO.Result._
   implicit val cs = IO.contextShift(ex)
 
-  lazy val writeCollection = collection.withReadPreference(
-    ReadPreference.primary
-  ) //due to a bug in ReactiveMongo
+  lazy val writeCollection = collection.withReadPreference(ReadPreference.primary) //due to a bug in ReactiveMongo
 
   def get(id: EntityId): R[Entity[T]] = of(
     collection.find(Query.idSelector(id), none[JsObject]).one[Entity[T]]
@@ -55,18 +53,16 @@ class AsyncEntityDAO[T: Format, F[_]: Async](
   }
 
   private def internalFind(q: Query): Future[Vector[Entity[T]]] =
-    builder(q)
-      .cursor[Entity[T]](readPref(q))
-      .collect[Vector](-1, errorHandler)
+    builder(q).cursor[Entity[T]](readPref(q)).
+      collect[Vector](-1, errorHandler)
 
-  private def readPref(q: Query) =
-    q.readPreference.getOrElse(collection.readPreference)
+  private def readPref(q: Query) = q.readPreference.getOrElse(collection.readPreference)
 
   private def builder(q: Query) = {
     var builder = collection.find(q.selector, q.projection)
-    builder = q.hint.fold(builder)(builder.hint(_))
-    builder = q.opts.fold(builder)(builder.options(_))
-    builder = q.sort.fold(builder)(builder.sort(_))
+    builder = q.hint.fold(builder)(builder.hint)
+    builder = q.opts.fold(builder)(builder.options)
+    builder = q.sort.fold(builder)(builder.sort)
     builder
   }
 
