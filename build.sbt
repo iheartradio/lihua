@@ -28,7 +28,7 @@ lazy val libs =
     .addJVM("play-json", version = "2.7.4", org = "com.typesafe.play")
     .addJVM("scanamo", version = "1.0.0-M11", org = "org.scanamo", "scanamo", "scanamo-cats-effect", "scanamo-testkit")
     .addJava( "jsr305" ,   version = "3.0.2", org = "com.google.code.findbugs")
-    .addJava( "slf4j-simple" ,   version = "1.7.28", org = "org.slf4j")
+    .addJava( "slf4j-simple" ,   version = "1.7.29", org = "org.slf4j")
     .addJVM( "tsec-cipher-jca" ,   version = "0.2.0-M2", org = "io.github.jmcardon")
 // format: on
 
