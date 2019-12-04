@@ -3,6 +3,7 @@ package mongo
 
 import com.typesafe.config.{Config, ConfigFactory}
 import reactivemongo.api._
+import reactivemongo.play.json.collection.JSONCollection
 import cats.effect.{Async, ContextShift, IO, Resource, Sync}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -11,7 +12,6 @@ import cats.implicits._
 import net.ceedubs.ficus.readers.namemappers.implicits.hyphenCase
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import net.ceedubs.ficus.readers.ValueReader
-import reactivemongo.api.bson.collection.BSONCollection
 
 import scala.concurrent.duration.FiniteDuration
 import concurrent.duration._
@@ -39,7 +39,7 @@ class MongoDB[F[_]: Async] private (
       dbName: String,
       collectionName: String
     )(implicit ec: ExecutionContext
-    ): F[BSONCollection] = {
+    ): F[JSONCollection] = {
 
     val collectionConfig =
       config.dbs.get(dbName).flatMap(_.collections.get(collectionName))
@@ -47,14 +47,16 @@ class MongoDB[F[_]: Async] private (
     val readPreference = collectionConfig.flatMap(_.readPreference)
     database(dbName).map(
       db =>
-        db[BSONCollection](name, db.failoverStrategy)
-          .withReadPreference(
-            readPreference.getOrElse(ReadPreference.primary)
-          )
+        new JSONCollection(
+          db,
+          name,
+          db.failoverStrategy,
+          readPreference.getOrElse(ReadPreference.primary)
+        )
     )
   }
 
-  def close(implicit to: FiniteDuration = 5.seconds): F[Unit] =
+  def close(implicit to: FiniteDuration = 2.seconds): F[Unit] =
     Sync[F].delay(driver.close(to))
 
   protected def toF[B](
@@ -121,9 +123,7 @@ object MongoDB {
       cryptO: Option[Crypt[F]] = None
     )(implicit F: Async[F]
     ): Resource[F, MongoDB[F]] =
-    Resource.make(MongoDB(rootConfig, cryptO))(
-      _.close(10.seconds)
-    )
+    Resource.make(MongoDB(rootConfig, cryptO))(_.close(10.seconds))
 
   private[mongo] def credOf[F[_]](
       config: MongoConfig,

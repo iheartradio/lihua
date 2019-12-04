@@ -3,9 +3,12 @@ package mongo
 
 import cats.effect.{Async, IO}
 import play.api.libs.json.Format
+import reactivemongo.play.json.collection.JSONCollection
 import cats.implicits._
-import reactivemongo.api.bson.collection.BSONCollection
+import reactivemongo.api.bson.BSONDocument
+import reactivemongo.api.bson.collection.BSONSerializationPack
 import reactivemongo.api.commands.CommandError
+import reactivemongo.api.indexes.{Index, IndexType}
 
 import scala.concurrent.ExecutionContext
 
@@ -22,10 +25,10 @@ abstract class DAOFactoryWithEnsure[A: Format, DAOF[_], F[_]](
   )(implicit F: Async[F])
     extends DAOFactory[F, DAOF, A] {
 
-  protected def ensure(collection: BSONCollection): F[Unit]
+  protected def ensure(collection: JSONCollection): F[Unit]
 
   private def ensureCollection(
-      collection: BSONCollection
+      collection: JSONCollection
     )(implicit ec: ExecutionContext
     ): F[Unit] = {
     implicit val cs = IO.contextShift(ec)
@@ -47,9 +50,30 @@ abstract class DAOFactoryWithEnsure[A: Format, DAOF[_], F[_]](
   }
 
   def doCreate(
-      c: BSONCollection
+      c: JSONCollection
     )(implicit ec: ExecutionContext
     ): F[EntityDAO[DAOF, A, Query]]
+
+  //replacement for the deprecated Index.apply
+  protected def index(
+      key: Seq[(String, IndexType)],
+      name: Option[String] = None,
+      unique: Boolean = false,
+      background: Boolean = false,
+      sparse: Boolean = false,
+      version: Option[Int] = None // let MongoDB decide
+    ): Index =
+    Index(BSONSerializationPack)(
+      key,
+      name,
+      unique,
+      background,
+      false,
+      sparse,
+      version,
+      None,
+      BSONDocument.empty
+    )
 }
 
 abstract class DirectDAOFactory[A: Format, F[_]](
@@ -59,7 +83,7 @@ abstract class DirectDAOFactory[A: Format, F[_]](
     extends DAOFactoryWithEnsure[A, F, F](dbName, collectionName) {
 
   def doCreate(
-      c: BSONCollection
+      c: JSONCollection
     )(implicit ec: ExecutionContext
     ): F[EntityDAO[F, A, Query]] =
     F.delay(AsyncEntityDAO.direct[F, A](new AsyncEntityDAO(c)))
@@ -75,7 +99,7 @@ abstract class EitherTDAOFactory[A: Format, F[_]](
     ) {
 
   def doCreate(
-      c: BSONCollection
+      c: JSONCollection
     )(implicit ec: ExecutionContext
     ): F[EntityDAO[AsyncEntityDAO.Result[F, ?], A, Query]] =
     F.pure(new AsyncEntityDAO[A, F](c))
