@@ -4,14 +4,13 @@ import cats.Monad
 import cats.tagless._
 
 /**
- * Final tagless encoding of the DAO Algebra
- * @tparam F effect Monad
- * @tparam T type of the domain model
- */
+  * Final tagless encoding of the DAO Algebra
+  * @tparam F effect Monad
+  * @tparam T type of the domain model
+  */
 @autoFunctorK
 @autoContravariant
 trait EntityDAO[F[_], T, Query] {
-
   def get(id: EntityId): F[Entity[T]]
 
   def insert(t: T): F[Entity[T]]
@@ -22,6 +21,8 @@ trait EntityDAO[F[_], T, Query] {
 
   def find(query: Query): F[Vector[Entity[T]]]
 
+  def all: F[Vector[Entity[T]]]
+
   def findOne(query: Query): F[Entity[T]]
 
   def findOneOption(query: Query): F[Option[Entity[T]]]
@@ -31,30 +32,40 @@ trait EntityDAO[F[_], T, Query] {
   def removeAll(query: Query): F[Int]
 
   /**
-   * update the first entity query finds
-   * @param query search query
-   * @param entity to be updated to
-   * @param upsert whether to insert of nothing is found
-   * @return whether anything is updated
-   */
-  def update(query: Query, entity: Entity[T], upsert: Boolean): F[Boolean]
+    * update the first entity query finds
+    * @param query search query
+    * @param entity to be updated to
+    * @param upsert whether to insert of nothing is found
+    * @return whether anything is updated
+    */
+  def update(
+      query: Query,
+      entity: Entity[T],
+      upsert: Boolean
+    ): F[Boolean]
 
-  def upsert(query: Query, t: T): F[Entity[T]]
+  def upsert(
+      query: Query,
+      t: T
+    ): F[Entity[T]]
 
   def removeAll(): F[Int]
 }
 
 object EntityDAO {
-
   /**
-   * Provides more default implementation thanks to F being a Monad
-   * @tparam F effect Monad
-   * @tparam T type of the domain model
-   * @tparam Query
-   */
-  abstract class EntityDAOMonad[F[_]: Monad, T, Query] extends EntityDAO[F, T, Query] {
+    * Provides more default implementation thanks to F being a Monad
+    * @tparam F effect Monad
+    * @tparam T type of the domain model
+    * @tparam Query
+    */
+  abstract class EntityDAOMonad[F[_]: Monad, T, Query]
+      extends EntityDAO[F, T, Query] {
     import cats.implicits._
-    def upsert(query: Query, t: T): F[Entity[T]] =
+    def upsert(
+        query: Query,
+        t: T
+      ): F[Entity[T]] =
       findOneOption(query).flatMap(
         _.fold(insert(t))(e => update(e.copy(data = t)))
       )
@@ -67,10 +78,15 @@ object EntityDAO {
       * @param upsert whether to insert of nothing is found
       * @return whether anything is updated
       */
-    def update(query: Query, entity: Entity[T], upsert: Boolean): F[Boolean] =
-      if(upsert) update(entity).as(true)
+    def update(
+        query: Query,
+        entity: Entity[T],
+        upsert: Boolean
+      ): F[Boolean] =
+      if (upsert) update(entity).as(true)
       else
-        find(query).flatMap(_.traverse(e => update(e.copy(data = entity.data)))).map(_.nonEmpty)
-
+        find(query)
+          .flatMap(_.traverse(e => update(e.copy(data = entity.data))))
+          .map(_.nonEmpty)
   }
 }

@@ -11,7 +11,6 @@ import reactivemongo.api.ReadPreference
 
 import concurrent.duration._
 class MongoDBTests extends AnyFunSuiteLike with Matchers {
-
   object mockCrypt extends Crypt[IO] {
     override def encrypt(value: String): IO[String] = ???
     override def decrypt(value: String): IO[String] =
@@ -69,18 +68,22 @@ class MongoDBTests extends AnyFunSuiteLike with Matchers {
         Some("L+JYLQYA2nADaTT014Uqxvt6ErA9Fsrk77XlDg==decrypted")
       )
     )
-
   }
 
-  test("can shutdown driver successfully") {
+  test("can shutdown driver successfully with shutdownhook") {
     import scala.concurrent.ExecutionContext.Implicits.global
     implicit val ms = ShutdownHook.manual
     val mongoDB =
-      MongoDB[IO](ConfigFactory.parseString("""
+      MongoDB[IO](
+        ConfigFactory.parseString(
+          """
         |mongoDB {
         |  hosts: ["127.0.0.1:27017"]
         |}
-      """.stripMargin), Some(mockCrypt)).unsafeRunSync()
+      """.stripMargin
+        ),
+        Some(mockCrypt)
+      ).unsafeRunSync()
 
     val process = for {
       _ <- mongoDB.collection("test", "test")
@@ -91,4 +94,22 @@ class MongoDBTests extends AnyFunSuiteLike with Matchers {
     succeed
   }
 
+  test("can shutdown driver successfully after resource is used") {
+    implicit val timer =
+      IO.timer(concurrent.ExecutionContext.Implicits.global)
+    MongoDB
+      .resource[IO](
+        ConfigFactory.parseString(
+          """
+      |mongoDB {
+      |  hosts: ["127.0.0.1:27017"]
+      |}
+    """.stripMargin
+        ),
+        Some(mockCrypt)
+      )
+      .use(_ => IO.sleep(3.seconds))
+      .unsafeRunSync()
+    succeed
+  }
 }

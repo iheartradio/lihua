@@ -22,19 +22,21 @@ import reactivemongo.api.Cursor.ErrorHandler
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 
-
 import scala.util.control.NoStackTrace
 import JsonFormats._
 import lihua.EntityDAO.EntityDAOMonad
 
-
-class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implicit ex: EC)
-  extends EntityDAOMonad[AsyncEntityDAO.Result[F, ?], T, Query] {
+class AsyncEntityDAO[T: Format, F[_]: Async](
+    collection: JSONCollection
+  )(implicit ex: EC)
+    extends EntityDAOMonad[AsyncEntityDAO.Result[F, ?], T, Query] {
   type R[A] = AsyncEntityDAO.Result[F, A]
   import AsyncEntityDAO.Result._
   implicit val cs = IO.contextShift(ex)
 
-  lazy val writeCollection = collection.withReadPreference(ReadPreference.primary) //due to a bug in ReactiveMongo
+  lazy val writeCollection = collection.withReadPreference(
+    ReadPreference.primary
+  ) //due to a bug in ReactiveMongo
 
   def get(id: EntityId): R[Entity[T]] = of(
     collection.find(Query.idSelector(id), none[JsObject]).one[Entity[T]]
@@ -42,6 +44,10 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
 
   def find(q: Query): R[Vector[Entity[T]]] = of {
     internalFind(q)
+  }
+
+  def all: R[Vector[Entity[T]]] = of {
+    internalFind(Query(JsObject.empty))
   }
 
   def findOne(q: Query): R[Entity[T]] = of {
@@ -53,10 +59,12 @@ class AsyncEntityDAO[T: Format, F[_]: Async](collection: JSONCollection)(implici
   }
 
   private def internalFind(q: Query): Future[Vector[Entity[T]]] =
-    builder(q).cursor[Entity[T]](readPref(q)).
-      collect[Vector](-1, errorHandler)
+    builder(q)
+      .cursor[Entity[T]](readPref(q))
+      .collect[Vector](-1, errorHandler)
 
-  private def readPref(q: Query) = q.readPreference.getOrElse(collection.readPreference)
+  private def readPref(q: Query) =
+    q.readPreference.getOrElse(collection.readPreference)
 
   private def builder(q: Query) = {
     var builder = collection.find(q.selector, q.projection)
@@ -158,6 +166,5 @@ object AsyncEntityDAO {
     fk.mapK(daoR)(λ[DBResult ~> F] { dr =>
       dr.value.flatMap(F.fromEither)
     })
-
   }
 }

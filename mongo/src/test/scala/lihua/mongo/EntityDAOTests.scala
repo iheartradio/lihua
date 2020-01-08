@@ -23,11 +23,13 @@ class EntityDAOTests extends AnyFunSuiteLike with Matchers {
   }
 
   lazy val localConfig =
-    ConfigFactory.parseString("""
+    ConfigFactory.parseString(
+      """
         |mongoDB {
         |  hosts: ["127.0.0.1:27017"]
         |}
-      """.stripMargin)
+      """.stripMargin
+    )
 
   test("MongoDB driver is created only once") {
     implicit val ms = ShutdownHook.manual
@@ -41,7 +43,6 @@ class EntityDAOTests extends AnyFunSuiteLike with Matchers {
 
     ms.callbacks.size shouldBe 1
     succeed
-
   }
 
   test("CRUD smoke") {
@@ -64,16 +65,6 @@ class EntityDAOTests extends AnyFunSuiteLike with Matchers {
 
   test("contramap") {
     cats.Contravariant[EntityDAO[IO, TestEntity, *]]
-  }
-
-  test("clean close") {
-    import reactivemongo.api.{MongoConnection, MongoDriver}
-
-    val mongoUri = "mongodb://localhost:27017"
-    val driver = MongoDriver()
-    val parsedUri = MongoConnection.parseURI(mongoUri)
-    val connection = parsedUri.map(s => driver.connection(Seq(mongoUri)))
-    driver.close()
   }
 }
 
