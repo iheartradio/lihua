@@ -5,6 +5,7 @@ import cats.effect.{Async, IO}
 import play.api.libs.json.Format
 import reactivemongo.play.json.collection.JSONCollection
 import cats.implicits._
+import reactivemongo.api.Collation
 import reactivemongo.api.bson.BSONDocument
 import reactivemongo.api.bson.collection.BSONSerializationPack
 import reactivemongo.api.commands.CommandError
@@ -24,7 +25,6 @@ abstract class DAOFactoryWithEnsure[A: Format, DAOF[_], F[_]](
     collectionName: String
   )(implicit F: Async[F])
     extends DAOFactory[F, DAOF, A] {
-
   protected def ensure(collection: JSONCollection): F[Unit]
 
   private def ensureCollection(
@@ -61,16 +61,39 @@ abstract class DAOFactoryWithEnsure[A: Format, DAOF[_], F[_]](
       unique: Boolean = false,
       background: Boolean = false,
       sparse: Boolean = false,
-      version: Option[Int] = None // let MongoDB decide
+      expireAfterSeconds: Option[Int] = None,
+      defaultLanguage: Option[String] = None,
+      languageOverride: Option[String] = None,
+      textIndexVersion: Option[Int] = None,
+      sphereIndexVersion: Option[Int] = None,
+      bits: Option[Int] = None,
+      min: Option[Double] = None,
+      max: Option[Double] = None,
+      bucketSize: Option[Double] = None,
+      collation: Option[Collation] = None,
+      version: Option[Int] = None
     ): Index =
     Index(BSONSerializationPack)(
-      key,
-      name,
-      unique,
-      background,
-      false,
-      sparse,
-      version,
+      key = key,
+      name = name,
+      unique = unique,
+      background = background,
+      dropDups = false,
+      sparse = sparse,
+      expireAfterSeconds = expireAfterSeconds,
+      storageEngine = None,
+      weights = None,
+      defaultLanguage = defaultLanguage,
+      languageOverride = languageOverride,
+      textIndexVersion = textIndexVersion,
+      sphereIndexVersion = sphereIndexVersion,
+      bits = bits,
+      min = min,
+      max = max,
+      bucketSize = bucketSize,
+      collation = collation,
+      wildcardProjection = None,
+      version = version,
       None,
       BSONDocument.empty
     )
@@ -81,7 +104,6 @@ abstract class DirectDAOFactory[A: Format, F[_]](
     collectionName: String
   )(implicit F: Async[F])
     extends DAOFactoryWithEnsure[A, F, F](dbName, collectionName) {
-
   def doCreate(
       c: JSONCollection
     )(implicit ec: ExecutionContext
@@ -97,7 +119,6 @@ abstract class EitherTDAOFactory[A: Format, F[_]](
       dbName,
       collectionName
     ) {
-
   def doCreate(
       c: JSONCollection
     )(implicit ec: ExecutionContext
