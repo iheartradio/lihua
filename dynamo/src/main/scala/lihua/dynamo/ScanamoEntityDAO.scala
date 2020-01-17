@@ -5,7 +5,7 @@ import cats.effect.Async
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsync
 import org.scanamo._
 import org.scanamo.syntax._
-import org.scanamo.auto._
+import org.scanamo.generic.auto._
 import cats.implicits._
 import ScanamoEntityDAO._
 import com.amazonaws.handlers.AsyncHandler
@@ -22,7 +22,6 @@ import com.amazonaws.services.dynamodbv2.model.{
   ScalarAttributeType
 }
 import lihua.EntityDAO.EntityDAOMonad
-import org.scanamo.error.DynamoReadError
 import org.scanamo.ops.ScanamoOps
 
 import scala.util.Random
@@ -36,21 +35,6 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat](
   private val table = Table[Entity[A]](tableName)
   private val sc = ScanamoCats[F](client)
 
-  private def exec[T](
-      ops: ScanamoOps[Option[Either[DynamoReadError, T]]]
-    ): F[T] =
-    sc.exec(ops)
-      .flatMap(
-        _.liftTo[F](MissingResultScanamoError)
-          .flatMap(_.leftMap(ScanamoError(_)).liftTo[F])
-      )
-
-  private def execVoid[T](
-      ops: ScanamoOps[Option[Either[DynamoReadError, T]]]
-    ): F[Unit] =
-    sc.exec(ops)
-      .flatMap(_.fold(F.unit)(_.leftMap(ScanamoError(_)).liftTo[F].void))
-
   private def execTraversableOnce[TO[_], T](
       ops: ScanamoOps[TO[Either[DynamoReadError, T]]]
     )(implicit ev: TO[Either[DynamoReadError, T]] <:< TraversableOnce[
@@ -63,11 +47,16 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat](
       )
 
   def get(id: EntityId): F[Entity[A]] =
-    exec(table.get(idFieldName -> id.value))
+    sc.exec(table.get(idFieldName -> id.value))
+      .flatMap(
+        _.liftTo[F](MissingResultScanamoError)
+          .flatMap(_.leftMap(ScanamoError(_)).liftTo[F])
+      )
 
   def insert(t: A): F[Entity[A]] =
     F.delay(Random.alphanumeric.take(20).mkString).flatMap { id =>
-      exec(table.put(t.toEntity(id)))
+      val e = t.toEntity(id)
+      sc.exec(table.put(e)).as(e)
     }
 
   private def toUniqueKeys(q: List[EntityId]) =
@@ -76,7 +65,7 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat](
   def update(entity: Entity[A]): F[Entity[A]] = upsert(entity)
 
   def upsert(entity: Entity[A]): F[Entity[A]] =
-    execVoid(table.put(entity)).as(entity)
+    sc.exec(table.put(entity)).as(entity)
 
   def find(query: List[EntityId]): F[Vector[Entity[A]]] =
     execTraversableOnce(table.getAll(toUniqueKeys(query)))
@@ -91,14 +80,14 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat](
     sc.exec(table.delete(idFieldName -> id)).void
 
   def removeAll(query: List[EntityId]): F[Int] =
-    sc.exec(table.deleteAll(toUniqueKeys(query))).map(_.size)
+    sc.exec(table.deleteAll(toUniqueKeys(query))).as(query.size)
 
   def removeAll(): F[Int] = {
     sc.exec(for {
       all <- table.scan()
       ids = all.flatMap(_.toOption.map(_._id))
       r <- table.deleteAll(toUniqueKeys(ids))
-    } yield r.size)
+    } yield ids.size)
   }
 
   def all: F[Vector[Entity[A]]] =
@@ -111,7 +100,7 @@ object ScanamoEntityDAO {
 
   case object MissingResultScanamoError extends RuntimeException
   case object UnexpectedNumberOfResult extends RuntimeException
-  case class ScanamoError(se: org.scanamo.error.ScanamoError)
+  case class ScanamoError(se: org.scanamo.ScanamoError)
       extends RuntimeException(se.toString)
   import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType._
   import scala.collection.JavaConverters._
