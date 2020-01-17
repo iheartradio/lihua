@@ -16,19 +16,19 @@ val gh = GitHubSettings(
   license = apache2
 )
 
-val reactiveMongoVer = "0.19.2"
+val reactiveMongoVer = "0.20.1"
 
 // format: off
 lazy val libs =
   org.typelevel.libraries
     .addJVM("reactivemongo", version = reactiveMongoVer, org = "org.reactivemongo", "reactivemongo", "reactivemongo-iteratees" )
     .addJVM("reactivemongo-play-json", version = reactiveMongoVer + "-play27", org = "org.reactivemongo")
-    .addJava("caffeine", version = "2.8.0", org = "com.github.ben-manes.caffeine")
+    .addJava("caffeine", version = "2.8.1", org = "com.github.ben-manes.caffeine")
     .addJVM("scalacache", version = "0.28.0", org = "com.github.cb372", "scalacache-cats-effect", "scalacache-caffeine")
     .addJVM("play-json", version = "2.7.4", org = "com.typesafe.play")
-    .addJVM("scanamo", version = "1.0.0-M11", org = "org.scanamo", "scanamo", "scanamo-cats-effect", "scanamo-testkit")
+    .addJVM("scanamo", version = "1.0.0-M12", org = "org.scanamo", "scanamo", "scanamo-cats-effect", "scanamo-testkit")
     .addJava( "jsr305" ,   version = "3.0.2", org = "com.google.code.findbugs")
-    .addJava( "slf4j-simple" ,   version = "1.7.29", org = "org.slf4j")
+    .addJava( "slf4j-simple" ,   version = "1.7.30", org = "org.slf4j")
     .addJVM( "tsec-cipher-jca" ,   version = "0.2.0-M2", org = "io.github.jmcardon")
 // format: on
 
@@ -73,8 +73,8 @@ lazy val mongo = project
     ),
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.7",
-      "com.typesafe.akka" %% "akka-slf4j" % "2.5.27" % Test,
-      "org.apache.logging.log4j" % "log4j-core" % "2.12.1" % Test,
+      "com.typesafe.akka" %% "akka-slf4j" % "2.5.26" % Test,
+      "org.apache.logging.log4j" % "log4j-core" % "2.13.0" % Test,
       "org.log4s" %% "log4s" % "1.8.2"
     ),
     scalacOptions += "-deprecation:false" //disabled due to the deprecation of reactivemongo-play-json while the new api isn't stable enough
