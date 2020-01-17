@@ -112,7 +112,7 @@ object ScanamoEntityDAO {
   case object MissingResultScanamoError extends RuntimeException
   case object UnexpectedNumberOfResult extends RuntimeException
   case class ScanamoError(se: org.scanamo.error.ScanamoError)
-      extends RuntimeException
+      extends RuntimeException(se.toString)
   import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType._
   import scala.collection.JavaConverters._
 
