@@ -106,7 +106,8 @@ lazy val dynamo = project
   .settings(
     crossScalaVersions := Seq(scalaVersion.value),
     libs.testDependencies("scalatest", "scanamo-testkit"),
-    libs.dependencies("scanamo-cats-effect")
+//    libs.dependencies("scanamo-cats-effect"), //todo: replace the following line once scanamo release new version
+    libraryDependencies += "org.scanamo" %% "scanamo-cats-effect" % "1.0.0-M12" exclude ("scalatestplus-scalacheck")
   )
 
 lazy val dynamoTestkit = project
