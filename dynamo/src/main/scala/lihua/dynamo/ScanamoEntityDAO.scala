@@ -49,7 +49,7 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat](
   def get(id: EntityId): F[Entity[A]] =
     sc.exec(table.get(idFieldName -> id.value))
       .flatMap(
-        _.liftTo[F](MissingResultScanamoError)
+        _.liftTo[F](EntityNotFound(id))
           .flatMap(_.leftMap(ScanamoError(_)).liftTo[F])
       )
 
@@ -98,7 +98,9 @@ object ScanamoEntityDAO {
   implicit val entityIdDynamoFormat: DynamoFormat[EntityId] =
     DynamoFormat[String].asInstanceOf[DynamoFormat[EntityId]]
 
-  case object MissingResultScanamoError extends RuntimeException
+  case class EntityNotFound(id: EntityId)
+      extends RuntimeException(s"Entity of id $id is not found")
+
   case object UnexpectedNumberOfResult extends RuntimeException
   case class ScanamoError(se: org.scanamo.ScanamoError)
       extends RuntimeException(se.toString)
