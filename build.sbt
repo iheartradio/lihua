@@ -29,7 +29,7 @@ lazy val libs =
     .addJVM("scanamo", version = "1.0.0-M12-1", org = "org.scanamo", "scanamo", "scanamo-cats-effect", "scanamo-testkit")
     .addJava( "jsr305" ,   version = "3.0.2", org = "com.google.code.findbugs")
     .addJava( "slf4j-simple" ,   version = "1.7.30", org = "org.slf4j")
-    .addJVM( "tsec-cipher-jca" ,   version = "0.2.0-M2", org = "io.github.jmcardon")
+    .addJVM( "tsec-cipher-jca" ,   version = "0.2.1-SNAPSHOT", org = "io.github.jmcardon")
 // format: on
 
 lazy val lihua = project
