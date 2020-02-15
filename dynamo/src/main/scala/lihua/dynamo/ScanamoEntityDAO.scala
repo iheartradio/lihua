@@ -21,21 +21,21 @@ import com.amazonaws.services.dynamodbv2.model.{
   ResourceNotFoundException,
   ScalarAttributeType
 }
-import lihua.EntityDAO.EntityDAOMonad
 import org.scanamo.ops.ScanamoOps
+import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType._
 
 import scala.util.Random
 import io.estatico.newtype.ops._
 
-class ScanamoEntityDAO[F[_], A: DynamoFormat](
+abstract class ScanamoDAOHelper[F[_], A: DynamoFormat](
     tableName: String,
     client: AmazonDynamoDBAsync
-  )(implicit F: Async[F])
-    extends EntityDAOMonad[F, A, List[EntityId]] {
-  private val table = Table[Entity[A]](tableName)
-  private val sc = ScanamoCats[F](client)
+  )(implicit F: Async[F]) {
+  protected val table = Table[A](tableName)
 
-  private def execTraversableOnce[TO[_], T](
+  protected val sc = ScanamoCats[F](client)
+
+  protected def execTraversableOnce[TO[_], T](
       ops: ScanamoOps[TO[Either[DynamoReadError, T]]]
     )(implicit ev: TO[Either[DynamoReadError, T]] <:< TraversableOnce[
         Either[DynamoReadError, T]
@@ -45,7 +45,14 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat](
       .flatMap(
         t => ev(t).toVector.traverse(_.leftMap(ScanamoError(_)).liftTo[F])
       )
+}
 
+class ScanamoEntityDAO[F[_], A: DynamoFormat](
+    tableName: String,
+    client: AmazonDynamoDBAsync
+  )(implicit F: Async[F])
+    extends ScanamoDAOHelper[F, Entity[A]](tableName, client)
+    with EntityDAO[F, A, List[EntityId]] {
   def get(id: EntityId): F[Entity[A]] =
     sc.exec(table.get(idFieldName -> id.value))
       .flatMap(
@@ -92,21 +99,37 @@ class ScanamoEntityDAO[F[_], A: DynamoFormat](
 
   def all: F[Vector[Entity[A]]] =
     execTraversableOnce(table.scan())
+
+  /**
+    * update the first entity query finds
+    *
+    * @param query  search query
+    * @param entity to be updated to
+    * @param upsert whether to insert of nothing is found
+    * @return whether anything is updated
+    */
+  def update(
+      query: List[EntityId],
+      entity: Entity[A],
+      upsert: Boolean
+    ): F[Boolean] =
+    if (upsert) update(entity).as(true)
+    else
+      find(query)
+        .flatMap(_.traverse(e => update(e.copy(data = entity.data))))
+        .map(_.nonEmpty)
+
+  def upsert(
+      query: List[EntityId],
+      t: A
+    ): F[Entity[A]] =
+    findOneOption(query).flatMap(
+      _.fold(insert(t))(e => update(e.copy(data = t)))
+    )
 }
 
-object ScanamoEntityDAO {
-  implicit val entityIdDynamoFormat: DynamoFormat[EntityId] =
-    DynamoFormat[String].asInstanceOf[DynamoFormat[EntityId]]
-
-  case class EntityNotFound(id: EntityId)
-      extends RuntimeException(s"Entity of id $id is not found")
-
-  case object UnexpectedNumberOfResult extends RuntimeException
-  case class ScanamoError(se: org.scanamo.ScanamoError)
-      extends RuntimeException(se.toString)
-  import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType._
+trait ScanamoManagement {
   import scala.collection.JavaConverters._
-
   private def attributeDefinitions(
       attributes: Seq[(String, ScalarAttributeType)]
     ) =
@@ -150,13 +173,13 @@ object ScanamoEntityDAO {
   def createTable[F[_]](
       client: AmazonDynamoDBAsync,
       tableName: String,
-      readCapacityUnits: Long = 1000L,
-      writeCapacityUnits: Long = 1000L
+      keyAttributes: Seq[(String, ScalarAttributeType)],
+      readCapacityUnits: Long,
+      writeCapacityUnits: Long
     )(implicit F: Async[F]
     ): F[Unit] = {
-    val attributes = Seq(lihua.idFieldName -> S)
-    val req = new CreateTableRequest(tableName, keySchema(attributes))
-      .withAttributeDefinitions(attributeDefinitions(attributes))
+    val req = new CreateTableRequest(tableName, keySchema(keyAttributes))
+      .withAttributeDefinitions(attributeDefinitions(keyAttributes))
       .withProvisionedThroughput(
         new ProvisionedThroughput(readCapacityUnits, writeCapacityUnits)
       )
@@ -169,8 +192,9 @@ object ScanamoEntityDAO {
   def ensureTable[F[_]](
       client: AmazonDynamoDBAsync,
       tableName: String,
-      readCapacityUnits: Long = 1000L,
-      writeCapacityUnits: Long = 1000L
+      keyAttributes: Seq[(String, ScalarAttributeType)],
+      readCapacityUnits: Long,
+      writeCapacityUnits: Long
     )(implicit F: Async[F]
     ): F[Unit] = {
     asyncHandle[F, DescribeTableRequest, DescribeTableResult](
@@ -180,9 +204,39 @@ object ScanamoEntityDAO {
         createTable(
           client,
           tableName,
+          keyAttributes,
           readCapacityUnits,
           writeCapacityUnits
         )
     }
   }
+}
+
+object ScanamoEntityDAO extends ScanamoManagement {
+  implicit val entityIdDynamoFormat: DynamoFormat[EntityId] =
+    DynamoFormat[String].asInstanceOf[DynamoFormat[EntityId]]
+
+  case class EntityNotFound(id: EntityId)
+      extends RuntimeException(s"Entity of id $id is not found")
+
+  case object UnexpectedNumberOfResult extends RuntimeException
+  case class ScanamoError(se: org.scanamo.ScanamoError)
+      extends RuntimeException(se.toString)
+
+  val entityIdKeyAttributes = Seq(lihua.idFieldName -> S)
+
+  def ensureTable[F[_]](
+      client: AmazonDynamoDBAsync,
+      tableName: String,
+      readCapacityUnits: Long = 10L,
+      writeCapacityUnits: Long = 10L
+    )(implicit F: Async[F]
+    ): F[Unit] =
+    ensureTable[F](
+      client,
+      tableName,
+      entityIdKeyAttributes,
+      readCapacityUnits,
+      writeCapacityUnits
+    )
 }
