@@ -23,7 +23,7 @@ lazy val libs =
   org.typelevel.libraries
     .addJVM("reactivemongo", version = reactiveMongoVer, org = "org.reactivemongo", "reactivemongo", "reactivemongo-iteratees" )
     .addJVM("reactivemongo-play-json", version = reactiveMongoVer + "-play27", org = "org.reactivemongo")
-    .addJava("caffeine", version = "2.8.1", org = "com.github.ben-manes.caffeine")
+    .addJava("caffeine", version = "2.8.3", org = "com.github.ben-manes.caffeine")
     .addJVM("scalacache", version = "0.28.0", org = "com.github.cb372", "scalacache-cats-effect", "scalacache-caffeine")
     .addJVM("play-json", version = "2.7.4", org = "com.typesafe.play")
     .addJVM("scanamo", version = "1.0.0-M12-1", org = "org.scanamo", "scanamo", "scanamo-cats-effect", "scanamo-testkit")
