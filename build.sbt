@@ -16,7 +16,7 @@ val gh = GitHubSettings(
   license = apache2
 )
 
-val reactiveMongoVer = "0.20.11"
+val reactiveMongoVer = "0.20.12"
 
 // format: off
 lazy val libs =
