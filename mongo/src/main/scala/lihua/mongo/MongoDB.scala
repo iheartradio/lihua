@@ -3,8 +3,7 @@ package mongo
 
 import com.typesafe.config.{Config, ConfigFactory}
 import reactivemongo.api._
-import reactivemongo.play.json.collection.JSONCollection
-import cats.effect.{Async, ContextShift, IO, Resource, Sync}
+import cats.effect.{Async, ContextShift, IO, Resource}
 
 import scala.concurrent.{ExecutionContext, Future}
 import net.ceedubs.ficus.Ficus._
@@ -15,6 +14,7 @@ import net.ceedubs.ficus.readers.ValueReader
 
 import scala.concurrent.duration.FiniteDuration
 import concurrent.duration._
+import reactivemongo.api.bson.collection.BSONCollection
 
 /**
   * A MongoDB instance from config
@@ -23,8 +23,7 @@ import concurrent.duration._
 class MongoDB[F[_]: Async] private (
     private[mongo] val config: MongoDB.MongoConfig,
     connection: MongoConnection,
-    private[mongo] val driver: MongoDriver) {
-
+    private[mongo] val driver: AsyncDriver) {
   private def database(
       databaseName: String
     )(implicit ec: ExecutionContext
@@ -39,43 +38,47 @@ class MongoDB[F[_]: Async] private (
       dbName: String,
       collectionName: String
     )(implicit ec: ExecutionContext
-    ): F[JSONCollection] = {
-
+    ): F[BSONCollection] = {
     val collectionConfig =
       config.dbs.get(dbName).flatMap(_.collections.get(collectionName))
     val name = collectionConfig.flatMap(_.name).getOrElse(collectionName)
     val readPreference = collectionConfig.flatMap(_.readPreference)
     database(dbName).map(
       db =>
-        new JSONCollection(
-          db,
-          name,
-          db.failoverStrategy,
-          readPreference.getOrElse(ReadPreference.primary)
-        )
+        db.collection[BSONCollection](
+            name,
+            db.failoverStrategy
+          )
+          .withReadPreference(
+            readPreference.getOrElse(ReadPreference.primary)
+          )
     )
   }
 
-  def close(implicit to: FiniteDuration = 2.seconds): F[Unit] =
-    Sync[F].delay(driver.close(to))
+  def close(
+      to: FiniteDuration = 2.seconds
+    )(implicit ex: ExecutionContext
+    ): F[Unit] = {
+    implicit val cs = IO.contextShift(ex)
+    toF(driver.close(to))
+  }
 
   protected def toF[B](
       f: => Future[B]
     )(implicit ec: ContextShift[IO]
     ): F[B] =
     IO.fromFuture(IO(f)).to[F]
-
 }
 
 object MongoDB {
-
   def apply[F[_]](
       rootConfig: Config,
       cryptO: Option[Crypt[F]] = None
     )(implicit F: Async[F],
-      sh: ShutdownHook = ShutdownHook.ignore
+      sh: ShutdownHook = ShutdownHook.ignore,
+      ec: ExecutionContext
     ): F[MongoDB[F]] = {
-
+    implicit val cs = IO.contextShift(ec)
     for {
       config <- F
         .delay(rootConfig.as[MongoConfig]("mongoDB"))
@@ -93,7 +96,7 @@ object MongoDB {
           )
           .resolve
       )
-      d <- F.delay(MongoDriver(mongoCfg, this.getClass.getClassLoader))
+      d <- F.delay(AsyncDriver(mongoCfg, this.getClass.getClassLoader))
       options = MongoConnectionOptions.default.copy(
         sslEnabled = config.sslEnabled,
         authenticationDatabase = config.authSource,
@@ -109,8 +112,9 @@ object MongoDB {
         ),
         credentials = creds
       )
-      connection <- F.delay(d.connection(config.hosts, options))
-
+      connection <- IO
+        .fromFuture(IO(d.connect(config.hosts, options)))
+        .to[F]
     } yield {
       val mongoDB = new MongoDB(config, connection, d)
       sh.onShutdown(mongoDB.driver.close())
@@ -121,7 +125,8 @@ object MongoDB {
   def resource[F[_]](
       rootConfig: Config,
       cryptO: Option[Crypt[F]] = None
-    )(implicit F: Async[F]
+    )(implicit F: Async[F],
+      ec: ExecutionContext
     ): Resource[F, MongoDB[F]] =
     Resource.make(MongoDB(rootConfig, cryptO))(_.close(10.seconds))
 
@@ -150,7 +155,6 @@ object MongoDB {
         //if authSource db is missing a credential, use the top one by default.
         (config.authSource, map.values.headOption).tupled
           .fold(map)(Map(_) ++ map)
-
       }
 
   class MongoDBConfigurationException(msg: String) extends Exception(msg)
@@ -201,11 +205,12 @@ object MongoDB {
           config: Config,
           path: String
         ): AuthenticationMode = config.getString(path) match {
-        case "CR"          => CrAuthentication
-        case "SCRAM-SHA-1" => ScramSha1Authentication
+        case "X509"          => X509Authentication
+        case "SCRAM-SHA-256" => ScramSha256Authentication
+        case "SCRAM-SHA-1"   => ScramSha1Authentication
         case s =>
           throw new MongoDBConfigurationException(
-            s + " is not a recognized Authentication Mode, Options are: CR, SCRAM-SHA-1"
+            s + " is not a recognized Authentication Mode, Options are: X509, SCRAM-SHA-1, SCRAM-SHA-256"
           )
       }
     }

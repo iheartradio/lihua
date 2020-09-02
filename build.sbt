@@ -16,13 +16,13 @@ val gh = GitHubSettings(
   license = apache2
 )
 
-val reactiveMongoVer = "0.20.11"
+val reactiveMongoVer = "1.0.0"
 
 // format: off
 lazy val libs =
   org.typelevel.libraries
-    .addJVM("reactivemongo", version = reactiveMongoVer, org = "org.reactivemongo", "reactivemongo", "reactivemongo-iteratees" )
-    .addJVM("reactivemongo-play-json", version = reactiveMongoVer + "-play27", org = "org.reactivemongo")
+    .addJVM("reactivemongo", version = reactiveMongoVer, org = "org.reactivemongo", "reactivemongo", "reactivemongo-bson-api", "reactivemongo-iteratees" )
+    .addJVM("reactivemongo-play-json-compat", version = reactiveMongoVer + "-play27", org = "org.reactivemongo")
     .addJava("caffeine", version = "2.8.1", org = "com.github.ben-manes.caffeine")
     .addJVM("scalacache", version = "0.28.0", org = "com.github.cb372", "scalacache-cats-effect", "scalacache-caffeine")
     .addJVM("play-json", version = "2.7.4", org = "com.typesafe.play")
@@ -68,8 +68,9 @@ lazy val mongo = project
     libs.dependencies(
       "cats-effect",
       "reactivemongo",
+      "reactivemongo-bson-api",
       "reactivemongo-iteratees",
-      "reactivemongo-play-json"
+      "reactivemongo-play-json-compat"
     ),
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.7",
@@ -144,7 +145,7 @@ lazy val commonSettings = buildSettings ++ publishSettings ++ unidocCommonSettin
   parallelExecution in Test := false,
   resolvers += "Sonatype OSS" at "https://oss.sonatype.org/service/local/repositories/releases/content/",
   sources in (Compile, doc) := Nil, //todo: somehow sbt doc hang, disable it for now so that I can release.
-  crossScalaVersions := Seq(libs.vers("scalac_2.11"), scalaVersion.value),
+  crossScalaVersions := Nil,
   developers := List(
     Developer(
       "@kailuowang",

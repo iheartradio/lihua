@@ -8,10 +8,11 @@ package mongo
 import cats.data.{EitherT, NonEmptyList}
 import lihua.mongo.DBError._
 import play.api.libs.json.{Format, JsObject}
-import reactivemongo.play.json.collection.JSONCollection
-import reactivemongo.play.json._
 import cats.implicits._
-
+import reactivemongo.api.bson._
+import reactivemongo.play.json.compat._
+import json2bson._
+import bson2json._
 import scala.concurrent.{Future, ExecutionContext => EC}
 import cats.effect.{Async, IO}
 import cats.{MonadError, ~>}
@@ -20,14 +21,15 @@ import cats.tagless.FunctorK
 import reactivemongo.api.{Cursor, ReadPreference}
 import reactivemongo.api.Cursor.ErrorHandler
 import reactivemongo.api.commands.WriteResult
-import reactivemongo.bson.BSONObjectID
 
 import scala.util.control.NoStackTrace
 import JsonFormats._
 import lihua.EntityDAO.EntityDAOMonad
+import reactivemongo.api.bson.BSONObjectID
+import reactivemongo.api.bson.collection.BSONCollection
 
 class AsyncEntityDAO[T: Format, F[_]: Async](
-    collection: JSONCollection
+    collection: BSONCollection
   )(implicit ex: EC)
     extends EntityDAOMonad[AsyncEntityDAO.Result[F, ?], T, Query] {
   type R[A] = AsyncEntityDAO.Result[F, A]
@@ -67,11 +69,8 @@ class AsyncEntityDAO[T: Format, F[_]: Async](
     q.readPreference.getOrElse(collection.readPreference)
 
   private def builder(q: Query) = {
-    var builder = collection.find(q.selector, q.projection)
-    builder = q.hint.fold(builder)(builder.hint)
-    builder = q.opts.fold(builder)(builder.options)
-    builder = q.sort.fold(builder)(builder.sort)
-    builder
+    val builder = collection.find(q.selector, q.projection)
+    q.sort.fold(builder)(builder.sort(_))
   }
 
   def insert(t: T): R[Entity[T]] = {
@@ -114,8 +113,8 @@ class AsyncEntityDAO[T: Format, F[_]: Async](
 
   def of[A](f: => Future[Either[DBError, A]]): Result[F, A] =
     EitherT(Async[F].liftIO(IO.fromFuture(IO(f.recover {
-      case l: reactivemongo.api.commands.LastError =>
-        DBLastError(l.message).asLeft[A]
+      case l: reactivemongo.api.commands.WriteResult =>
+        DBLastError(l.getMessage).asLeft[A]
       case e: Throwable => DBException(e, collection.name).asLeft[A]
     }))))
 }

@@ -8,6 +8,7 @@ import org.scalatest.funsuite.AnyFunSuiteLike
 
 import reactivemongo.api.MongoConnectionOptions.Credential
 import reactivemongo.api.ReadPreference
+import concurrent.ExecutionContext.Implicits.global
 
 import concurrent.duration._
 class MongoDBTests extends AnyFunSuiteLike with Matchers {

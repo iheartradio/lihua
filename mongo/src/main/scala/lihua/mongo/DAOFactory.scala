@@ -3,15 +3,14 @@ package mongo
 
 import cats.effect.{Async, IO}
 import play.api.libs.json.Format
-import reactivemongo.play.json.collection.JSONCollection
 import cats.implicits._
 import reactivemongo.api.Collation
 import reactivemongo.api.bson.BSONDocument
-import reactivemongo.api.bson.collection.BSONSerializationPack
-import reactivemongo.api.commands.CommandError
 import reactivemongo.api.indexes.{Index, IndexType}
 
 import scala.concurrent.ExecutionContext
+import reactivemongo.api.bson.collection.BSONCollection
+import reactivemongo.api.commands.CommandException
 
 trait DAOFactory[F[_], DAOF[_], A] {
   def create(
@@ -25,15 +24,15 @@ abstract class DAOFactoryWithEnsure[A: Format, DAOF[_], F[_]](
     collectionName: String
   )(implicit F: Async[F])
     extends DAOFactory[F, DAOF, A] {
-  protected def ensure(collection: JSONCollection): F[Unit]
+  protected def ensure(collection: BSONCollection): F[Unit]
 
   private def ensureCollection(
-      collection: JSONCollection
+      collection: BSONCollection
     )(implicit ec: ExecutionContext
     ): F[Unit] = {
     implicit val cs = IO.contextShift(ec)
     F.liftIO(IO.fromFuture(IO(collection.create().recover {
-      case CommandError.Code(48 /*NamespaceExists*/ ) => ()
+      case CommandException.Code(48 /*NamespaceExists*/ ) => ()
     })))
   }
 
@@ -50,7 +49,7 @@ abstract class DAOFactoryWithEnsure[A: Format, DAOF[_], F[_]](
   }
 
   def doCreate(
-      c: JSONCollection
+      c: BSONCollection
     )(implicit ec: ExecutionContext
     ): F[EntityDAO[DAOF, A, Query]]
 
@@ -72,13 +71,12 @@ abstract class DAOFactoryWithEnsure[A: Format, DAOF[_], F[_]](
       bucketSize: Option[Double] = None,
       collation: Option[Collation] = None,
       version: Option[Int] = None
-    ): Index =
-    Index(BSONSerializationPack)(
+    ): Index.Default =
+    Index(
       key = key,
       name = name,
       unique = unique,
       background = background,
-      dropDups = false,
       sparse = sparse,
       expireAfterSeconds = expireAfterSeconds,
       storageEngine = None,
@@ -105,7 +103,7 @@ abstract class DirectDAOFactory[A: Format, F[_]](
   )(implicit F: Async[F])
     extends DAOFactoryWithEnsure[A, F, F](dbName, collectionName) {
   def doCreate(
-      c: JSONCollection
+      c: BSONCollection
     )(implicit ec: ExecutionContext
     ): F[EntityDAO[F, A, Query]] =
     F.delay(AsyncEntityDAO.direct[F, A](new AsyncEntityDAO(c)))
@@ -120,7 +118,7 @@ abstract class EitherTDAOFactory[A: Format, F[_]](
       collectionName
     ) {
   def doCreate(
-      c: JSONCollection
+      c: BSONCollection
     )(implicit ec: ExecutionContext
     ): F[EntityDAO[AsyncEntityDAO.Result[F, ?], A, Query]] =
     F.pure(new AsyncEntityDAO[A, F](c))
