@@ -74,7 +74,7 @@ lazy val mongo = project
     ),
     libraryDependencies ++= Seq(
       "com.iheart" %% "ficus" % "1.4.7",
-      "com.typesafe.akka" %% "akka-slf4j" % "2.5.26" % Test,
+      "com.typesafe.akka" %% "akka-slf4j" % "2.5.29" % Test,
       "org.apache.logging.log4j" % "log4j-core" % "2.13.0" % Test,
       "org.log4s" %% "log4s" % "1.8.2"
     ),
